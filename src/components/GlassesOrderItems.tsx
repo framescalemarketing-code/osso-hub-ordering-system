@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import type { OrderItem, GlassesType } from '@/lib/types';
 
 interface Props {
@@ -9,6 +8,10 @@ interface Props {
   onComplete: () => void;
 }
 
+type OrderItemDraft = Partial<OrderItem> & {
+  glasses_type: GlassesType;
+};
+
 const glassesTypeLabels: Record<GlassesType, string> = {
   safety_rx: 'Safety Prescription',
   safety_non_rx: 'Safety Non-Prescription',
@@ -16,7 +19,7 @@ const glassesTypeLabels: Record<GlassesType, string> = {
   non_safety_non_rx: 'Non-Safety Non-Prescription',
 };
 
-const defaultItem: Partial<OrderItem> = {
+const defaultItem: OrderItemDraft = {
   glasses_type: 'safety_rx',
   frame_brand: '', frame_model: '', frame_color: '', frame_size: '',
   frame_price: 0, lens_type: '', lens_material: '', lens_coating: [],
@@ -28,10 +31,10 @@ export default function GlassesOrderItems({ items, onChange, onComplete }: Props
     onChange([...items, { ...defaultItem }]);
   }
 
-  function updateItem(index: number, key: string, value: any) {
+  function updateItem<K extends keyof OrderItemDraft>(index: number, key: K, value: OrderItemDraft[K]) {
     const updated = items.map((item, i) => {
       if (i !== index) return item;
-      const newItem = { ...item, [key]: value };
+      const newItem = { ...item, [key]: value } as OrderItemDraft;
       newItem.line_total = ((Number(newItem.frame_price) || 0) + (Number(newItem.lens_price) || 0)) * (Number(newItem.quantity) || 1);
       return newItem;
     });
@@ -73,7 +76,7 @@ export default function GlassesOrderItems({ items, onChange, onComplete }: Props
             <label className={labelClass}>Glasses Type</label>
             <select
               value={item.glasses_type || 'safety_rx'}
-              onChange={e => updateItem(idx, 'glasses_type', e.target.value)}
+              onChange={e => updateItem(idx, 'glasses_type', e.target.value as GlassesType)}
               className={inputClass}
             >
               {Object.entries(glassesTypeLabels).map(([val, label]) => (

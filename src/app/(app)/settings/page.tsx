@@ -3,7 +3,6 @@ import { integrations } from '@/lib/integrations/config';
 
 export default async function SettingsPage() {
   const employee = await getCurrentEmployee();
-  const isAdmin = employee?.role === 'admin';
 
   const checks = [
     { name: 'Supabase', connected: !!process.env.NEXT_PUBLIC_SUPABASE_URL },

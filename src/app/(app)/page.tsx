@@ -1,5 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import Link from 'next/link';
+import type { Customer, Order } from '@/lib/types';
+
+type DashboardOrder = Order & {
+  customer?: Pick<Customer, 'first_name' | 'last_name'> | null;
+};
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient();
@@ -24,6 +29,7 @@ export default async function DashboardPage() {
     .select('id, order_number, order_type, status, total, created_at, customer:customers(first_name, last_name)')
     .order('created_at', { ascending: false })
     .limit(10);
+  const typedRecentOrders = recentOrders as DashboardOrder[] | null;
 
   return (
     <div>
@@ -63,8 +69,8 @@ export default async function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {recentOrders && recentOrders.length > 0 ? (
-                recentOrders.map((order: any) => (
+              {typedRecentOrders && typedRecentOrders.length > 0 ? (
+                typedRecentOrders.map(order => (
                   <tr key={order.id} className="border-b border-gray-800/50 hover:bg-gray-800/50">
                     <td className="px-4 py-3">
                       <Link href={`/orders/${order.id}`} className="text-blue-400 hover:underline">

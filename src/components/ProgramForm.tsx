@@ -4,17 +4,27 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
+type ProgramFormState = {
+  company_name: string;
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string;
+  approval_required: boolean;
+  approver_emails: string;
+  invoice_terms: string;
+};
+
 export default function ProgramForm() {
   const supabase = createClient();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<ProgramFormState>({
     company_name: '', contact_name: '', contact_email: '', contact_phone: '',
     approval_required: true, approver_emails: '', invoice_terms: 'Net 30',
   });
 
-  function update(key: string, value: any) {
+  function update<K extends keyof ProgramFormState>(key: K, value: ProgramFormState[K]) {
     setForm(prev => ({ ...prev, [key]: value }));
   }
 

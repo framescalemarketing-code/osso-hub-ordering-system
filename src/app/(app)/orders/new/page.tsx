@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import CustomerIntakeForm from '@/components/CustomerIntakeForm';
@@ -11,7 +11,7 @@ import type { Customer, Prescription, OrderItem, Program } from '@/lib/types';
 type Step = 'customer' | 'prescription' | 'items' | 'review';
 
 export default function NewOrderPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [step, setStep] = useState<Step>('customer');
   const [orderType, setOrderType] = useState<'regular' | 'program'>('regular');
@@ -27,7 +27,7 @@ export default function NewOrderPage() {
     supabase.from('programs').select('*').eq('is_active', true).then(({ data }) => {
       if (data) setPrograms(data as Program[]);
     });
-  }, []);
+  }, [supabase]);
 
   async function handleSubmitOrder() {
     if (!customer || items.length === 0) return;
@@ -55,8 +55,8 @@ export default function NewOrderPage() {
 
       const { order } = await res.json();
       router.push(`/orders/${order.id}`);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create order');
       setSubmitting(false);
     }
   }

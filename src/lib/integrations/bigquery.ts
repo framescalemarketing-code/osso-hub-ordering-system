@@ -1,4 +1,5 @@
 import { integrations } from './config';
+import type { Dataset } from '@google-cloud/bigquery';
 import type { Order, Customer, OrderItem } from '@/lib/types';
 
 export async function writeOrderToBigQuery(order: Order & { customer: Customer; items: OrderItem[] }) {
@@ -51,7 +52,7 @@ export async function writeOrderToBigQuery(order: Order & { customer: Customer; 
   if (itemRows.length) await itemsTable.insert(itemRows);
 }
 
-async function ensureTables(dataset: any) {
+async function ensureTables(dataset: Dataset) {
   const ordersSchema = [
     { name: 'order_id', type: 'STRING' },
     { name: 'order_number', type: 'STRING' },
@@ -87,7 +88,7 @@ async function ensureTables(dataset: any) {
 
   try {
     const [tables] = await dataset.getTables();
-    const tableNames = tables.map((t: any) => t.id);
+    const tableNames = tables.map(t => t.id);
     if (!tableNames.includes('orders')) {
       await dataset.createTable('orders', { schema: ordersSchema });
     }

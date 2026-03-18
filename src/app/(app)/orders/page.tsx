@@ -1,5 +1,11 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import Link from 'next/link';
+import type { Customer, Employee, Order } from '@/lib/types';
+
+type OrderListRow = Order & {
+  customer?: Pick<Customer, 'first_name' | 'last_name'> | null;
+  employee?: Pick<Employee, 'first_name' | 'last_name'> | null;
+};
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ page?: string; status?: string; type?: string }> }) {
   const params = await searchParams;
@@ -17,6 +23,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   if (params.type) query = query.eq('order_type', params.type);
 
   const { data: orders, count } = await query;
+  const typedOrders = orders as OrderListRow[] | null;
   const totalPages = Math.ceil((count || 0) / limit);
 
   return (
@@ -56,7 +63,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             </tr>
           </thead>
           <tbody>
-            {orders?.map((order: any) => (
+            {typedOrders?.map(order => (
               <tr key={order.id} className="border-b border-gray-800/50 hover:bg-gray-800/50">
                 <td className="px-4 py-3">
                   <Link href={`/orders/${order.id}`} className="text-blue-400 hover:underline font-medium">{order.order_number}</Link>
@@ -78,7 +85,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             ))}
           </tbody>
         </table>
-        {(!orders || orders.length === 0) && (
+        {(!typedOrders || typedOrders.length === 0) && (
           <div className="px-4 py-12 text-center text-gray-500">No orders found</div>
         )}
       </div>

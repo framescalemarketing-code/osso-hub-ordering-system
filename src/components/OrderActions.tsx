@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import type { Order, EmployeeRole } from '@/lib/types';
+import type { EmployeeRole, Order } from '@/lib/types';
 
-export default function OrderActions({ order, employeeRole }: { order: any; employeeRole: EmployeeRole }) {
+type OrderActionsOrder = Pick<Order, 'id' | 'status' | 'invoice_sent_at'>;
+
+export default function OrderActions({ order, employeeRole }: { order: OrderActionsOrder; employeeRole: EmployeeRole }) {
   const [loading, setLoading] = useState('');
 
   async function updateStatus(status: string) {

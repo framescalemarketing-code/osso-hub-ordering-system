@@ -1,12 +1,14 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getCurrentEmployee } from '@/lib/auth';
 import ProgramForm from '@/components/ProgramForm';
+import type { Program } from '@/lib/types';
 
 export default async function ProgramsPage() {
   const supabase = await createServerSupabaseClient();
   const employee = await getCurrentEmployee();
 
   const { data: programs } = await supabase.from('programs').select('*').order('company_name');
+  const typedPrograms = programs as Program[] | null;
 
   const canManage = ['admin', 'manager'].includes(employee?.role || '');
 
@@ -31,7 +33,7 @@ export default async function ProgramsPage() {
             </tr>
           </thead>
           <tbody>
-            {programs?.map((p: any) => (
+            {typedPrograms?.map(p => (
               <tr key={p.id} className="border-b border-gray-800/50 hover:bg-gray-800/50">
                 <td className="px-4 py-3 font-medium">{p.company_name}</td>
                 <td className="px-4 py-3 text-gray-400">{p.contact_name || '—'}</td>
@@ -43,7 +45,7 @@ export default async function ProgramsPage() {
             ))}
           </tbody>
         </table>
-        {(!programs || programs.length === 0) && (
+        {(!typedPrograms || typedPrograms.length === 0) && (
           <div className="px-4 py-12 text-center text-gray-500">No programs yet</div>
         )}
       </div>

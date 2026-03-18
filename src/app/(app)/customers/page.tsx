@@ -1,5 +1,9 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import Link from 'next/link';
+import type { Customer } from '@/lib/types';
+
+type CustomerWithProgram = Customer & {
+  program?: { company_name: string } | null;
+};
 
 export default async function CustomersPage() {
   const supabase = await createServerSupabaseClient();
@@ -8,6 +12,7 @@ export default async function CustomersPage() {
     .select('*, program:programs(company_name)')
     .order('created_at', { ascending: false })
     .limit(100);
+  const typedCustomers = customers as CustomerWithProgram[] | null;
 
   return (
     <div>
@@ -29,7 +34,7 @@ export default async function CustomersPage() {
             </tr>
           </thead>
           <tbody>
-            {customers?.map((c: any) => (
+            {typedCustomers?.map(c => (
               <tr key={c.id} className="border-b border-gray-800/50 hover:bg-gray-800/50">
                 <td className="px-4 py-3 font-medium">{c.first_name} {c.last_name}</td>
                 <td className="px-4 py-3 text-gray-400">{c.email || '—'}</td>

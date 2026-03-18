@@ -1,38 +1,31 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const supabase = createClient();
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
 
-    if (authError) {
+    if (!res.ok) {
       setError('Invalid email or password');
       setLoading(false);
       return;
     }
 
-    // Update last_login_at
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('employees').update({ last_login_at: new Date().toISOString() }).eq('auth_user_id', user.id);
-    }
-
-    router.push('/');
-    router.refresh();
+    window.location.href = '/orders/new';
   }
 
   return (

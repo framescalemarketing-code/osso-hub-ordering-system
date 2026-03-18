@@ -1,4 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import type { Customer, Order, Reminder } from '@/lib/types';
+
+type ReminderRow = Reminder & {
+  customer?: Pick<Customer, 'first_name' | 'last_name'> | null;
+  order?: Pick<Order, 'order_number'> | null;
+};
 
 export default async function RemindersPage() {
   const supabase = await createServerSupabaseClient();
@@ -7,6 +13,7 @@ export default async function RemindersPage() {
     .select('*, customer:customers(first_name, last_name), order:orders(order_number)')
     .order('due_at', { ascending: true })
     .limit(100);
+  const typedReminders = reminders as ReminderRow[] | null;
 
   return (
     <div>
@@ -25,7 +32,7 @@ export default async function RemindersPage() {
             </tr>
           </thead>
           <tbody>
-            {reminders?.map((r: any) => (
+            {typedReminders?.map(r => (
               <tr key={r.id} className="border-b border-gray-800/50 hover:bg-gray-800/50">
                 <td className="px-4 py-3 capitalize">{r.reminder_type.replace(/_/g, ' ')}</td>
                 <td className="px-4 py-3">{r.subject}</td>
@@ -43,7 +50,7 @@ export default async function RemindersPage() {
             ))}
           </tbody>
         </table>
-        {(!reminders || reminders.length === 0) && (
+        {(!typedReminders || typedReminders.length === 0) && (
           <div className="px-4 py-12 text-center text-gray-500">No reminders</div>
         )}
       </div>

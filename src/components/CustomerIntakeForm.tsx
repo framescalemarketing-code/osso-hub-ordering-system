@@ -2,12 +2,28 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { Customer } from '@/lib/types';
+import type { Address, Customer } from '@/lib/types';
 
 interface Props {
   onComplete: (customer: Customer) => void;
   existingCustomer?: Customer | null;
 }
+
+type CustomerFormState = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  date_of_birth: string;
+  employer: string;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  hipaa_consent: boolean;
+  ccpa_consent: boolean;
+  marketing_consent: boolean;
+};
 
 export default function CustomerIntakeForm({ onComplete, existingCustomer }: Props) {
   const supabase = createClient();
@@ -16,17 +32,18 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
   const [mode, setMode] = useState<'search' | 'new'>(existingCustomer ? 'search' : 'search');
   const [saving, setSaving] = useState(false);
 
-  const [form, setForm] = useState({
+  const address = existingCustomer?.address as Address | null | undefined;
+  const [form, setForm] = useState<CustomerFormState>({
     first_name: existingCustomer?.first_name || '',
     last_name: existingCustomer?.last_name || '',
     email: existingCustomer?.email || '',
     phone: existingCustomer?.phone || '',
     date_of_birth: existingCustomer?.date_of_birth || '',
     employer: existingCustomer?.employer || '',
-    street: (existingCustomer?.address as any)?.street || '',
-    city: (existingCustomer?.address as any)?.city || '',
-    state: (existingCustomer?.address as any)?.state || '',
-    zip: (existingCustomer?.address as any)?.zip || '',
+    street: address?.street || '',
+    city: address?.city || '',
+    state: address?.state || '',
+    zip: address?.zip || '',
     hipaa_consent: existingCustomer?.hipaa_consent_signed || false,
     ccpa_consent: existingCustomer?.ccpa_consent_signed || false,
     marketing_consent: existingCustomer?.marketing_consent || false,
@@ -42,7 +59,7 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
     setSearchResults((data as Customer[]) || []);
   }
 
-  function update(key: string, value: any) {
+  function update<K extends keyof CustomerFormState>(key: K, value: CustomerFormState[K]) {
     setForm(prev => ({ ...prev, [key]: value }));
   }
 
@@ -67,6 +84,7 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
     };
 
     const { data, error } = await supabase.from('customers').insert(payload).select().single();
+    const savedCustomer = data as Customer;
 
     if (error) {
       alert('Error saving customer: ' + error.message);
@@ -75,13 +93,13 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
     }
 
     // Log consents
-    const consents = [];
-    if (form.hipaa_consent) consents.push({ customer_id: data.id, consent_type: 'hipaa', granted: true });
-    if (form.ccpa_consent) consents.push({ customer_id: data.id, consent_type: 'ccpa', granted: true });
-    if (form.marketing_consent) consents.push({ customer_id: data.id, consent_type: 'marketing', granted: true });
+    const consents: Array<{ customer_id: string; consent_type: 'hipaa' | 'ccpa' | 'marketing'; granted: true }> = [];
+    if (form.hipaa_consent) consents.push({ customer_id: savedCustomer.id, consent_type: 'hipaa', granted: true });
+    if (form.ccpa_consent) consents.push({ customer_id: savedCustomer.id, consent_type: 'ccpa', granted: true });
+    if (form.marketing_consent) consents.push({ customer_id: savedCustomer.id, consent_type: 'marketing', granted: true });
     if (consents.length) await supabase.from('consent_log').insert(consents);
 
-    onComplete(data as Customer);
+    onComplete(savedCustomer);
   }
 
   const inputClass = "w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm";

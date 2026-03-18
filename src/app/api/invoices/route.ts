@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceClient } from '@/lib/supabase/server';
 import { integrations } from '@/lib/integrations/config';
+import type { Customer, Order, OrderItem, Program } from '@/lib/types';
+
+type InvoiceOrder = Order & {
+  customer?: Customer | null;
+  program?: Program | null;
+  items?: OrderItem[];
+};
 
 // Generate and send invoice for an order
 export async function POST(request: NextRequest) {
@@ -19,19 +26,20 @@ export async function POST(request: NextRequest) {
     .select('*, customer:customers(*), items:order_items(*), program:programs(*)')
     .eq('id', order_id)
     .single();
+  const typedOrder = order as InvoiceOrder | null;
 
-  if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+  if (!typedOrder) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
 
   // Generate invoice number
-  const invoiceNumber = `INV-${order.order_number.replace('OSSO-', '')}`;
+  const invoiceNumber = `INV-${typedOrder.order_number.replace('OSSO-', '')}`;
 
   // Build invoice HTML
-  const invoiceHtml = buildInvoiceHtml(order, invoiceNumber);
+  const invoiceHtml = buildInvoiceHtml(typedOrder, invoiceNumber);
 
   // Determine recipient
-  const recipientEmail = order.order_type === 'program' && order.program?.contact_email
-    ? order.program.contact_email
-    : order.customer?.email;
+  const recipientEmail = typedOrder.order_type === 'program' && typedOrder.program?.contact_email
+    ? typedOrder.program.contact_email
+    : typedOrder.customer?.email;
 
   if (!recipientEmail) {
     return NextResponse.json({ error: 'No email address for invoice recipient' }, { status: 400 });
@@ -59,8 +67,8 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ invoice_number: invoiceNumber, sent_to: recipientEmail });
 }
 
-function buildInvoiceHtml(order: any, invoiceNumber: string): string {
-  const items = (order.items || []).map((item: any) => `
+function buildInvoiceHtml(order: InvoiceOrder, invoiceNumber: string): string {
+  const items = (order.items || []).map(item => `
     <tr>
       <td style="padding:8px;border-bottom:1px solid #eee">${item.frame_brand || ''} ${item.frame_model || ''} — ${(item.glasses_type || '').replace(/_/g, ' ')}</td>
       <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${item.quantity}</td>

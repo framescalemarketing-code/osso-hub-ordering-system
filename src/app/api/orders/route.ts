@@ -5,6 +5,12 @@ import { syncToNetSuite } from '@/lib/integrations/netsuite';
 import { syncToQuickBooks } from '@/lib/integrations/quickbooks';
 import { syncToMailchimp } from '@/lib/integrations/mailchimp';
 import { writeOrderToBigQuery } from '@/lib/integrations/bigquery';
+import type { Customer, Order, OrderItem } from '@/lib/types';
+
+type OrderInputItem = Partial<OrderItem> & {
+  glasses_type: OrderItem['glasses_type'];
+  quantity?: number;
+};
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient();
@@ -16,14 +22,21 @@ export async function POST(request: NextRequest) {
   if (!employee) return NextResponse.json({ error: 'Employee not found' }, { status: 403 });
 
   const body = await request.json();
-  const { order_type, customer_id, program_id, prescription_id, items, shipping_address } = body;
+  const { order_type, customer_id, program_id, prescription_id, items, shipping_address } = body as {
+    order_type: Order['order_type'];
+    customer_id: string;
+    program_id?: string | null;
+    prescription_id?: string | null;
+    items: OrderInputItem[];
+    shipping_address?: Order['shipping_address'];
+  };
 
   if (!customer_id || !items?.length) {
     return NextResponse.json({ error: 'Customer and items required' }, { status: 400 });
   }
 
   // Calculate totals
-  const subtotal = items.reduce((sum: number, i: any) => sum + (Number(i.line_total) || 0), 0);
+  const subtotal = items.reduce((sum, i) => sum + (Number(i.line_total) || 0), 0);
   const tax = Math.round(subtotal * 0.0875 * 100) / 100;
   const total = subtotal + tax;
 
@@ -51,7 +64,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Insert order items
-  const orderItems = items.map((item: any) => ({
+  const orderItems = items.map(item => ({
     order_id: order.id,
     glasses_type: item.glasses_type,
     frame_brand: item.frame_brand || null,
@@ -99,7 +112,11 @@ export async function POST(request: NextRequest) {
   }
 
   // Fire-and-forget integrations (non-blocking)
-  const fullOrder = { ...order, customer, items: savedItems || [] };
+  const fullOrder = {
+    ...order,
+    customer: customer as Customer,
+    items: (savedItems || []) as OrderItem[],
+  } as Order & { customer: Customer; items: OrderItem[] };
   const serviceClient = createServiceClient();
 
   async function logSync(integration: string, recordId: string, fn: () => Promise<string | null>) {
@@ -110,10 +127,11 @@ export async function POST(request: NextRequest) {
         external_id: externalId, status: 'success', attempts: 1, last_attempt_at: new Date().toISOString(),
       });
       return externalId;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown sync failure';
       await serviceClient.from('sync_log').insert({
         integration, record_type: 'order', record_id: recordId,
-        status: 'failed', error_message: err.message, attempts: 1, last_attempt_at: new Date().toISOString(),
+        status: 'failed', error_message: message, attempts: 1, last_attempt_at: new Date().toISOString(),
       });
       return null;
     }
@@ -134,7 +152,7 @@ export async function POST(request: NextRequest) {
   // Don't await — let them complete in the background
   Promise.allSettled(syncPromises).then(async (results) => {
     // Update order with external IDs
-    const updates: any = {};
+    const updates: Partial<Pick<Order, 'clickup_task_id' | 'netsuite_id' | 'quickbooks_id'>> = {};
     const [clickup, netsuite, quickbooks] = results;
     if (clickup.status === 'fulfilled' && clickup.value) updates.clickup_task_id = clickup.value;
     if (netsuite.status === 'fulfilled' && netsuite.value) updates.netsuite_id = netsuite.value;

@@ -29,7 +29,7 @@ export async function syncToNetSuite(order: Order & { customer: Customer }) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': buildNetSuiteOAuth(accountId, 'POST', `${baseUrl}/salesOrder`),
+      'Authorization': buildNetSuiteOAuth(accountId),
     },
     body: JSON.stringify(payload),
   });
@@ -44,7 +44,7 @@ export async function syncToNetSuite(order: Order & { customer: Customer }) {
   return id || null;
 }
 
-function buildNetSuiteOAuth(accountId: string, method: string, url: string): string {
+function buildNetSuiteOAuth(accountId: string): string {
   // Placeholder — requires proper OAuth 1.0 signature generation
   // In production, use a library like oauth-1.0a
   const consumerKey = process.env.NETSUITE_CONSUMER_KEY!;
