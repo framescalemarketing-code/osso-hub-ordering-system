@@ -45,21 +45,21 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map(s => (
-          <div key={s.label} className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <p className="text-sm text-gray-400">{s.label}</p>
+          <div key={s.label} className="bg-white border border-gray-200 rounded-xl p-6">
+            <p className="text-sm text-gray-500">{s.label}</p>
             <p className="text-3xl font-bold mt-1">{s.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl">
-        <div className="p-4 border-b border-gray-800">
-          <h2 className="text-lg font-semibold">Recent Orders</h2>
+      <div className="bg-white border border-gray-200 rounded-xl">
+        <div className="p-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-800">Recent Orders</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-800 text-gray-400">
+              <tr className="border-b border-gray-200 text-gray-500">
                 <th className="text-left px-4 py-3">Order #</th>
                 <th className="text-left px-4 py-3">Customer</th>
                 <th className="text-left px-4 py-3">Type</th>
@@ -71,9 +71,9 @@ export default async function DashboardPage() {
             <tbody>
               {typedRecentOrders && typedRecentOrders.length > 0 ? (
                 typedRecentOrders.map(order => (
-                  <tr key={order.id} className="border-b border-gray-800/50 hover:bg-gray-800/50">
+                  <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <Link href={`/orders/${order.id}`} className="text-blue-400 hover:underline">
+                      <Link href={`/orders/${order.id}`} className="text-blue-600 hover:underline font-medium">
                         {order.order_number}
                       </Link>
                     </td>
@@ -83,24 +83,24 @@ export default async function DashboardPage() {
                     <td className="px-4 py-3 capitalize">{order.order_type}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        order.status === 'completed' ? 'bg-green-900/30 text-green-400' :
-                        order.status === 'pending_approval' ? 'bg-yellow-900/30 text-yellow-400' :
-                        order.status === 'cancelled' ? 'bg-red-900/30 text-red-400' :
-                        'bg-blue-900/30 text-blue-400'
+                        order.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        order.status === 'pending_approval' ? 'bg-amber-100 text-amber-700' :
+                        order.status === 'cancelled' ? 'bg-red-100 text-red-600' :
+                        'bg-blue-100 text-blue-700'
                       }`}>
                         {order.status.replace('_', ' ')}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">${Number(order.total).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-gray-400">
+                    <td className="px-4 py-3 text-gray-500">
                       {new Date(order.created_at).toLocaleDateString()}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                    No orders yet. <Link href="/orders/new" className="text-blue-400 hover:underline">Create your first order</Link>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                    No orders yet. <Link href="/orders/new" className="text-blue-600 hover:underline font-medium">Create your first order</Link>
                   </td>
                 </tr>
               )}

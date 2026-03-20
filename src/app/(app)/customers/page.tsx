@@ -20,10 +20,10 @@ export default async function CustomersPage() {
         <h1 className="text-2xl font-bold">Customers</h1>
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-800 text-gray-400">
+            <tr className="border-b border-gray-200 text-gray-500">
               <th className="text-left px-4 py-3">Name</th>
               <th className="text-left px-4 py-3">Email</th>
               <th className="text-left px-4 py-3">Phone</th>
@@ -35,20 +35,20 @@ export default async function CustomersPage() {
           </thead>
           <tbody>
             {typedCustomers?.map(c => (
-              <tr key={c.id} className="border-b border-gray-800/50 hover:bg-gray-800/50">
+              <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium">{c.first_name} {c.last_name}</td>
-                <td className="px-4 py-3 text-gray-400">{c.email || '—'}</td>
-                <td className="px-4 py-3 text-gray-400">{c.phone || '—'}</td>
-                <td className="px-4 py-3 text-gray-400">{c.program?.company_name || '—'}</td>
+                <td className="px-4 py-3 text-gray-500">{c.email || '—'}</td>
+                <td className="px-4 py-3 text-gray-500">{c.phone || '—'}</td>
+                <td className="px-4 py-3 text-gray-500">{c.program?.company_name || '—'}</td>
                 <td className="px-4 py-3">{c.hipaa_consent_signed ? '✓' : '✗'}</td>
                 <td className="px-4 py-3">{c.marketing_consent ? '✓' : '—'}</td>
-                <td className="px-4 py-3 text-gray-400">{new Date(c.created_at).toLocaleDateString()}</td>
+                <td className="px-4 py-3 text-gray-500">{new Date(c.created_at).toLocaleDateString()}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {(!customers || customers.length === 0) && (
-          <div className="px-4 py-12 text-center text-gray-500">No customers yet</div>
+          <div className="px-4 py-12 text-center text-gray-400">No customers yet</div>
         )}
       </div>
     </div>

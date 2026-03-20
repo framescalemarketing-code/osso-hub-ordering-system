@@ -74,7 +74,7 @@ export default function NewOrderPage() {
         <button
           onClick={() => setOrderType('regular')}
           className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-            orderType === 'regular' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+            orderType === 'regular' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           Regular Customer
@@ -82,7 +82,7 @@ export default function NewOrderPage() {
         <button
           onClick={() => setOrderType('program')}
           className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-            orderType === 'program' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+            orderType === 'program' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           Program Employee
@@ -92,11 +92,11 @@ export default function NewOrderPage() {
       {/* Program Selector */}
       {orderType === 'program' && (
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-300 mb-1">Program</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
           <select
             value={selectedProgramId || ''}
             onChange={e => setSelectedProgramId(e.target.value || null)}
-            className="w-full max-w-md px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white"
+            className="w-full max-w-md px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900"
           >
             <option value="">Select a program...</option>
             {programs.map(p => (
@@ -112,12 +112,12 @@ export default function NewOrderPage() {
           <div
             key={s}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
-              step === s ? 'bg-blue-600/20 text-blue-400 border border-blue-600/30' :
+              step === s ? 'bg-blue-50 text-blue-600 border border-blue-200' :
               (['customer', 'prescription', 'items', 'review'].indexOf(step) > i)
-                ? 'bg-green-900/20 text-green-400' : 'bg-gray-800 text-gray-500'
+                ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
             }`}
           >
-            <span className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-xs">
+            <span className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-xs">
               {i + 1}
             </span>
             <span className="capitalize">{s}</span>
@@ -126,7 +126,7 @@ export default function NewOrderPage() {
       </div>
 
       {error && (
-        <div className="bg-red-900/30 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm mb-6">{error}</div>
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm mb-6">{error}</div>
       )}
 
       {/* Step Content */}
@@ -155,27 +155,27 @@ export default function NewOrderPage() {
 
       {step === 'review' && (
         <div className="space-y-6">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
-                <p className="text-sm text-gray-400">Customer</p>
+                <p className="text-sm text-gray-500">Customer</p>
                 <p className="font-medium">{customer?.first_name} {customer?.last_name}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Order Type</p>
+                <p className="text-sm text-gray-500">Order Type</p>
                 <p className="font-medium capitalize">{orderType}</p>
               </div>
               {prescription && (
                 <div>
-                  <p className="text-sm text-gray-400">Prescription</p>
+                  <p className="text-sm text-gray-500">Prescription</p>
                   <p className="font-medium">Rx on file</p>
                 </div>
               )}
               {selectedProgramId && (
                 <div>
-                  <p className="text-sm text-gray-400">Program</p>
+                  <p className="text-sm text-gray-500">Program</p>
                   <p className="font-medium">{programs.find(p => p.id === selectedProgramId)?.company_name}</p>
                 </div>
               )}
@@ -183,7 +183,7 @@ export default function NewOrderPage() {
 
             <table className="w-full text-sm mb-4">
               <thead>
-                <tr className="border-b border-gray-800 text-gray-400">
+                <tr className="border-b border-gray-200 text-gray-500">
                   <th className="text-left py-2">Item</th>
                   <th className="text-left py-2">Type</th>
                   <th className="text-right py-2">Price</th>
@@ -191,7 +191,7 @@ export default function NewOrderPage() {
               </thead>
               <tbody>
                 {items.map((item, idx) => (
-                  <tr key={idx} className="border-b border-gray-800/50">
+                  <tr key={idx} className="border-b border-gray-100">
                     <td className="py-2">{item.frame_brand} {item.frame_model}</td>
                     <td className="py-2 capitalize">{item.glasses_type?.replace(/_/g, ' ')}</td>
                     <td className="py-2 text-right">${Number(item.line_total || 0).toFixed(2)}</td>
@@ -210,7 +210,7 @@ export default function NewOrderPage() {
           <div className="flex gap-3">
             <button
               onClick={() => setStep('items')}
-              className="px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-semibold transition"
+              className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition"
             >
               Back
             </button>

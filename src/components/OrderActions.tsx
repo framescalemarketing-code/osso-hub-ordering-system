@@ -58,13 +58,13 @@ export default function OrderActions({ order, employeeRole }: { order: OrderActi
       )}
       {canManage && !order.invoice_sent_at && order.status !== 'draft' && order.status !== 'cancelled' && (
         <button onClick={sendInvoice} disabled={!!loading}
-          className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition disabled:opacity-50">
+          className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium text-white transition disabled:opacity-50">
           {loading === 'invoice' ? '...' : 'Send Invoice'}
         </button>
       )}
       {canManage && !['completed', 'cancelled'].includes(order.status) && (
         <button onClick={() => updateStatus('cancelled')} disabled={!!loading}
-          className="px-3 py-2 bg-red-900/50 hover:bg-red-800 rounded-lg text-sm font-medium text-red-400 transition disabled:opacity-50">
+          className="px-3 py-2 bg-red-50 hover:bg-red-100 rounded-lg text-sm font-medium text-red-600 transition disabled:opacity-50">
           Cancel
         </button>
       )}

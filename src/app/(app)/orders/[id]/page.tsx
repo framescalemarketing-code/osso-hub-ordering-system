@@ -32,7 +32,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <Link href="/orders" className="text-sm text-gray-400 hover:text-white">← Orders</Link>
+          <Link href="/orders" className="text-sm text-gray-500 hover:text-gray-800">← Orders</Link>
         <h1 className="text-2xl font-bold mt-1">{typedOrder.order_number}</h1>
       </div>
         <OrderActions order={typedOrder} employeeRole={employee?.role || 'readonly'} />
@@ -42,38 +42,38 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         {/* Main Info */}
         <div className="lg:col-span-2 space-y-6">
           {/* Status */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
             <div className="flex items-center gap-4 mb-4">
               <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                typedOrder.status === 'completed' ? 'bg-green-900/30 text-green-400' :
-                typedOrder.status === 'pending_approval' ? 'bg-yellow-900/30 text-yellow-400' :
-                typedOrder.status === 'cancelled' ? 'bg-red-900/30 text-red-400' :
-                'bg-blue-900/30 text-blue-400'
+                typedOrder.status === 'completed' ? 'bg-green-100 text-green-700' :
+                typedOrder.status === 'pending_approval' ? 'bg-amber-100 text-amber-700' :
+                typedOrder.status === 'cancelled' ? 'bg-red-100 text-red-600' :
+                'bg-blue-100 text-blue-700'
               }`}>{typedOrder.status.replace(/_/g, ' ')}</span>
-              <span className="capitalize text-sm text-gray-400">{typedOrder.order_type} order</span>
+              <span className="capitalize text-sm text-gray-500">{typedOrder.order_type} order</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div><p className="text-gray-400">Subtotal</p><p className="font-medium">${Number(typedOrder.subtotal).toFixed(2)}</p></div>
-              <div><p className="text-gray-400">Tax</p><p className="font-medium">${Number(typedOrder.tax).toFixed(2)}</p></div>
-              <div><p className="text-gray-400">Discount</p><p className="font-medium">${Number(typedOrder.discount).toFixed(2)}</p></div>
-              <div><p className="text-gray-400">Total</p><p className="text-xl font-bold">${Number(typedOrder.total).toFixed(2)}</p></div>
+              <div><p className="text-gray-500">Subtotal</p><p className="font-medium">${Number(typedOrder.subtotal).toFixed(2)}</p></div>
+              <div><p className="text-gray-500">Tax</p><p className="font-medium">${Number(typedOrder.tax).toFixed(2)}</p></div>
+              <div><p className="text-gray-500">Discount</p><p className="font-medium">${Number(typedOrder.discount).toFixed(2)}</p></div>
+              <div><p className="text-gray-500">Total</p><p className="text-xl font-bold">${Number(typedOrder.total).toFixed(2)}</p></div>
             </div>
           </div>
 
           {/* Items */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Items</h2>
             <div className="space-y-3">
               {typedOrder.items?.map(item => (
-                <div key={item.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium">{item.frame_brand} {item.frame_model}</p>
-                    <p className="text-sm text-gray-400 capitalize">{item.glasses_type?.replace(/_/g, ' ')} · {item.lens_type} · {item.lens_material}</p>
-                    {item.lens_vendor && <p className="text-xs text-blue-400 mt-1">Lens vendor: {item.lens_vendor} {item.lens_order_id ? `#${item.lens_order_id}` : ''}</p>}
+                    <p className="text-sm text-gray-500 capitalize">{item.glasses_type?.replace(/_/g, ' ')} · {item.lens_type} · {item.lens_material}</p>
+                    {item.lens_vendor && <p className="text-xs text-blue-600 mt-1">Lens vendor: {item.lens_vendor} {item.lens_order_id ? `#${item.lens_order_id}` : ''}</p>}
                   </div>
                   <div className="text-right">
                     <p className="font-medium">${Number(item.line_total).toFixed(2)}</p>
-                    <p className="text-xs text-gray-400">Qty: {item.quantity}</p>
+                    <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                   </div>
                 </div>
               ))}
@@ -82,16 +82,16 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
           {/* Approvals */}
           {typedOrder.approvals && typedOrder.approvals.length > 0 && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <div className="bg-white border border-gray-200 rounded-xl p-6">
               <h2 className="text-lg font-semibold mb-4">Approvals</h2>
               <div className="space-y-2">
                 {typedOrder.approvals.map(a => (
-                  <div key={a.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg text-sm">
+                  <div key={a.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm">
                     <span>{a.approver_email}</span>
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      a.status === 'approved' ? 'bg-green-900/30 text-green-400' :
-                      a.status === 'rejected' ? 'bg-red-900/30 text-red-400' :
-                      'bg-yellow-900/30 text-yellow-400'
+                      a.status === 'approved' ? 'bg-green-100 text-green-700' :
+                      a.status === 'rejected' ? 'bg-red-100 text-red-600' :
+                      'bg-amber-100 text-amber-700'
                     }`}>{a.status}</span>
                   </div>
                 ))}
@@ -102,29 +102,29 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <h3 className="text-sm font-semibold text-gray-400 mb-3">Customer</h3>
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <h3 className="text-sm font-semibold text-gray-500 mb-3">Customer</h3>
             <p className="font-medium">{typedOrder.customer?.first_name} {typedOrder.customer?.last_name}</p>
-            <p className="text-sm text-gray-400">{typedOrder.customer?.email}</p>
-            <p className="text-sm text-gray-400">{typedOrder.customer?.phone}</p>
+            <p className="text-sm text-gray-500">{typedOrder.customer?.email}</p>
+            <p className="text-sm text-gray-500">{typedOrder.customer?.phone}</p>
           </div>
 
           {typedOrder.program && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-              <h3 className="text-sm font-semibold text-gray-400 mb-3">Program</h3>
+            <div className="bg-white border border-gray-200 rounded-xl p-6">
+              <h3 className="text-sm font-semibold text-gray-500 mb-3">Program</h3>
               <p className="font-medium">{typedOrder.program.company_name}</p>
-              {typedOrder.program.invoice_terms && <p className="text-sm text-gray-400">Terms: {typedOrder.program.invoice_terms}</p>}
+              {typedOrder.program.invoice_terms && <p className="text-sm text-gray-500">Terms: {typedOrder.program.invoice_terms}</p>}
             </div>
           )}
 
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <h3 className="text-sm font-semibold text-gray-400 mb-3">Details</h3>
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <h3 className="text-sm font-semibold text-gray-500 mb-3">Details</h3>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-gray-400">Created by</span><span>{typedOrder.employee?.first_name} {typedOrder.employee?.last_name}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400">Created</span><span>{new Date(typedOrder.created_at).toLocaleString()}</span></div>
-              {typedOrder.invoice_number && <div className="flex justify-between"><span className="text-gray-400">Invoice</span><span>{typedOrder.invoice_number}</span></div>}
-              {typedOrder.clickup_task_id && <div className="flex justify-between"><span className="text-gray-400">ClickUp</span><span className="text-blue-400">{typedOrder.clickup_task_id}</span></div>}
-              {typedOrder.tracking_number && <div className="flex justify-between"><span className="text-gray-400">Tracking</span><span>{typedOrder.tracking_number}</span></div>}
+              <div className="flex justify-between"><span className="text-gray-500">Created by</span><span>{typedOrder.employee?.first_name} {typedOrder.employee?.last_name}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Created</span><span>{new Date(typedOrder.created_at).toLocaleString()}</span></div>
+              {typedOrder.invoice_number && <div className="flex justify-between"><span className="text-gray-500">Invoice</span><span>{typedOrder.invoice_number}</span></div>}
+              {typedOrder.clickup_task_id && <div className="flex justify-between"><span className="text-gray-500">ClickUp</span><span className="text-blue-600">{typedOrder.clickup_task_id}</span></div>}
+              {typedOrder.tracking_number && <div className="flex justify-between"><span className="text-gray-500">Tracking</span><span>{typedOrder.tracking_number}</span></div>}
             </div>
           </div>
         </div>

@@ -46,7 +46,7 @@ export default function ProgramForm() {
     router.refresh();
   }
 
-  const inputClass = "w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm";
+  const inputClass = "w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm";
 
   if (!open) {
     return (
@@ -57,8 +57,8 @@ export default function ProgramForm() {
   }
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-      <h3 className="font-semibold mb-4">New Program</h3>
+    <div className="bg-white border border-gray-200 rounded-xl p-6">
+      <h3 className="font-semibold mb-4 text-gray-800">New Program</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <input placeholder="Company Name *" value={form.company_name} onChange={e => update('company_name', e.target.value)} className={inputClass} />
         <input placeholder="Contact Name" value={form.contact_name} onChange={e => update('contact_name', e.target.value)} className={inputClass} />
@@ -67,13 +67,13 @@ export default function ProgramForm() {
         <input placeholder="Approver Emails (comma-separated)" value={form.approver_emails} onChange={e => update('approver_emails', e.target.value)} className={inputClass} />
         <input placeholder="Invoice Terms" value={form.invoice_terms} onChange={e => update('invoice_terms', e.target.value)} className={inputClass} />
       </div>
-      <label className="flex items-center gap-2 text-sm mb-4">
+        <label className="flex items-center gap-2 text-sm mb-4 text-gray-700">
         <input type="checkbox" checked={form.approval_required} onChange={e => update('approval_required', e.target.checked)} />
         Require approval before processing
       </label>
       <div className="flex gap-2">
         <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium">{saving ? 'Saving...' : 'Save'}</button>
-        <button onClick={() => setOpen(false)} className="px-4 py-2 bg-gray-800 rounded-lg text-sm">Cancel</button>
+        <button onClick={() => setOpen(false)} className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm">Cancel</button>
       </div>
     </div>
   );

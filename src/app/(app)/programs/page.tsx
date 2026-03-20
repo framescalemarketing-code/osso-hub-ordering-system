@@ -20,10 +20,10 @@ export default async function ProgramsPage() {
 
       {canManage && <ProgramForm />}
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mt-6">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mt-6">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-800 text-gray-400">
+            <tr className="border-b border-gray-200 text-gray-500">
               <th className="text-left px-4 py-3">Company</th>
               <th className="text-left px-4 py-3">Contact</th>
               <th className="text-left px-4 py-3">Email</th>
@@ -34,19 +34,19 @@ export default async function ProgramsPage() {
           </thead>
           <tbody>
             {typedPrograms?.map(p => (
-              <tr key={p.id} className="border-b border-gray-800/50 hover:bg-gray-800/50">
+              <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium">{p.company_name}</td>
-                <td className="px-4 py-3 text-gray-400">{p.contact_name || '—'}</td>
-                <td className="px-4 py-3 text-gray-400">{p.contact_email || '—'}</td>
+                <td className="px-4 py-3 text-gray-500">{p.contact_name || '—'}</td>
+                <td className="px-4 py-3 text-gray-500">{p.contact_email || '—'}</td>
                 <td className="px-4 py-3">{p.approval_required ? 'Required' : 'No'}</td>
-                <td className="px-4 py-3 text-gray-400">{p.invoice_terms}</td>
+                <td className="px-4 py-3 text-gray-500">{p.invoice_terms}</td>
                 <td className="px-4 py-3">{p.is_active ? '✓' : '✗'}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {(!typedPrograms || typedPrograms.length === 0) && (
-          <div className="px-4 py-12 text-center text-gray-500">No programs yet</div>
+          <div className="px-4 py-12 text-center text-gray-400">No programs yet</div>
         )}
       </div>
     </div>

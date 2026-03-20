@@ -27,9 +27,9 @@ export default function Sidebar({ employeeName, role }: { employeeName: string; 
   }
 
   return (
-    <aside className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col min-h-screen">
-      <div className="p-6 border-b border-gray-800">
-        <h1 className="text-xl font-bold text-white">OSSO Hub</h1>
+    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col min-h-screen">
+      <div className="p-6 border-b border-gray-200">
+        <h1 className="text-xl font-bold text-gray-900">OSSO Hub</h1>
         <p className="text-xs text-gray-500 mt-1">Ordering System</p>
       </div>
 
@@ -42,8 +42,8 @@ export default function Sidebar({ employeeName, role }: { employeeName: string; 
               href={item.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
                 isActive
-                  ? 'bg-blue-600/20 text-blue-400'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
               <span>{item.icon}</span>
@@ -53,12 +53,12 @@ export default function Sidebar({ employeeName, role }: { employeeName: string; 
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-800">
-        <div className="text-sm text-white font-medium">{employeeName}</div>
+      <div className="p-4 border-t border-gray-200">
+        <div className="text-sm text-gray-800 font-medium">{employeeName}</div>
         <div className="text-xs text-gray-500 capitalize">{role}</div>
         <button
           onClick={handleLogout}
-          className="mt-3 text-xs text-gray-500 hover:text-red-400 transition"
+          className="mt-3 text-xs text-gray-500 hover:text-red-500 transition"
         >
           Sign Out
         </button>

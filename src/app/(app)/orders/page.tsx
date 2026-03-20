@@ -41,7 +41,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             href={`/orders${s === 'all' ? '' : `?status=${s}`}`}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
               (s === 'all' && !params.status) || params.status === s
-                ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+                ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
             {s.replace(/_/g, ' ')}
@@ -49,10 +49,10 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         ))}
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-800 text-gray-400">
+            <tr className="border-b border-gray-200 text-gray-500">
               <th className="text-left px-4 py-3">Order #</th>
               <th className="text-left px-4 py-3">Customer</th>
               <th className="text-left px-4 py-3">Type</th>
@@ -64,29 +64,29 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           </thead>
           <tbody>
             {typedOrders?.map(order => (
-              <tr key={order.id} className="border-b border-gray-800/50 hover:bg-gray-800/50">
+              <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="px-4 py-3">
-                  <Link href={`/orders/${order.id}`} className="text-blue-400 hover:underline font-medium">{order.order_number}</Link>
+                  <Link href={`/orders/${order.id}`} className="text-blue-600 hover:underline font-medium">{order.order_number}</Link>
                 </td>
                 <td className="px-4 py-3">{order.customer?.first_name} {order.customer?.last_name}</td>
                 <td className="px-4 py-3 capitalize">{order.order_type}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    order.status === 'completed' ? 'bg-green-900/30 text-green-400' :
-                    order.status === 'pending_approval' ? 'bg-yellow-900/30 text-yellow-400' :
-                    order.status === 'cancelled' ? 'bg-red-900/30 text-red-400' :
-                    'bg-blue-900/30 text-blue-400'
+                    order.status === 'completed' ? 'bg-green-100 text-green-700' :
+                    order.status === 'pending_approval' ? 'bg-amber-100 text-amber-700' :
+                    order.status === 'cancelled' ? 'bg-red-100 text-red-600' :
+                    'bg-blue-100 text-blue-700'
                   }`}>{order.status.replace(/_/g, ' ')}</span>
                 </td>
                 <td className="px-4 py-3 text-right">${Number(order.total).toFixed(2)}</td>
-                <td className="px-4 py-3 text-gray-400">{order.employee?.first_name} {order.employee?.last_name}</td>
-                <td className="px-4 py-3 text-gray-400">{new Date(order.created_at).toLocaleDateString()}</td>
+                <td className="px-4 py-3 text-gray-500">{order.employee?.first_name} {order.employee?.last_name}</td>
+                <td className="px-4 py-3 text-gray-500">{new Date(order.created_at).toLocaleDateString()}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {(!typedOrders || typedOrders.length === 0) && (
-          <div className="px-4 py-12 text-center text-gray-500">No orders found</div>
+          <div className="px-4 py-12 text-center text-gray-400">No orders found</div>
         )}
       </div>
 
@@ -97,7 +97,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             <Link
               key={p}
               href={`/orders?page=${p}${params.status ? `&status=${params.status}` : ''}`}
-              className={`w-8 h-8 flex items-center justify-center rounded ${p === page ? 'bg-blue-600' : 'bg-gray-800 hover:bg-gray-700'} text-sm`}
+              className={`w-8 h-8 flex items-center justify-center rounded ${p === page ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} text-sm`}
             >{p}</Link>
           ))}
         </div>

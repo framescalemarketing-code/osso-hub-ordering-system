@@ -45,8 +45,8 @@ export default function GlassesOrderItems({ items, onChange, onComplete }: Props
     onChange(items.filter((_, i) => i !== index));
   }
 
-  const inputClass = "w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent";
-  const labelClass = "block text-xs font-medium text-gray-400 mb-1";
+  const inputClass = "w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent";
+  const labelClass = "block text-xs font-medium text-gray-600 mb-1";
 
   return (
     <div className="space-y-6">
@@ -58,16 +58,16 @@ export default function GlassesOrderItems({ items, onChange, onComplete }: Props
       </div>
 
       {items.length === 0 && (
-        <div className="bg-gray-900 border border-gray-800 border-dashed rounded-xl p-12 text-center">
-          <p className="text-gray-500 mb-4">No items added yet</p>
+        <div className="bg-white border border-gray-200 border-dashed rounded-xl p-12 text-center">
+          <p className="text-gray-400 mb-4">No items added yet</p>
           <button onClick={addItem} className="px-4 py-2 bg-blue-600 rounded-lg text-sm font-medium">Add First Pair</button>
         </div>
       )}
 
       {items.map((item, idx) => (
-        <div key={idx} className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <div key={idx} className="bg-white border border-gray-200 rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-300">Pair #{idx + 1}</h3>
+            <h3 className="text-sm font-semibold text-gray-700">Pair #{idx + 1}</h3>
             <button onClick={() => removeItem(idx)} className="text-xs text-red-400 hover:text-red-300">Remove</button>
           </div>
 
@@ -86,7 +86,7 @@ export default function GlassesOrderItems({ items, onChange, onComplete }: Props
           </div>
 
           {/* Frame */}
-          <h4 className="text-xs font-semibold text-gray-400 mb-2 mt-4">Frame</h4>
+          <h4 className="text-xs font-semibold text-gray-500 mb-2 mt-4">Frame</h4>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
             <div><label className={labelClass}>Brand</label><input type="text" value={item.frame_brand || ''} onChange={e => updateItem(idx, 'frame_brand', e.target.value)} className={inputClass} /></div>
             <div><label className={labelClass}>Model</label><input type="text" value={item.frame_model || ''} onChange={e => updateItem(idx, 'frame_model', e.target.value)} className={inputClass} /></div>
@@ -96,7 +96,7 @@ export default function GlassesOrderItems({ items, onChange, onComplete }: Props
           </div>
 
           {/* Lens */}
-          <h4 className="text-xs font-semibold text-gray-400 mb-2">Lens</h4>
+          <h4 className="text-xs font-semibold text-gray-500 mb-2">Lens</h4>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
             <div><label className={labelClass}>Lens Type</label><input type="text" value={item.lens_type || ''} onChange={e => updateItem(idx, 'lens_type', e.target.value)} className={inputClass} placeholder="SV, Bifocal, Progressive" /></div>
             <div><label className={labelClass}>Material</label><input type="text" value={item.lens_material || ''} onChange={e => updateItem(idx, 'lens_material', e.target.value)} className={inputClass} placeholder="Poly, Trivex, Hi-index" /></div>
@@ -110,7 +110,7 @@ export default function GlassesOrderItems({ items, onChange, onComplete }: Props
             <div><label className={labelClass}>Notes</label><input type="text" value={item.notes || ''} onChange={e => updateItem(idx, 'notes', e.target.value)} className={inputClass} /></div>
             <div>
               <label className={labelClass}>Line Total</label>
-              <div className="px-3 py-2 bg-gray-700 rounded-lg text-white text-sm font-medium">
+              <div className="px-3 py-2 bg-gray-100 rounded-lg text-gray-800 text-sm font-medium">
                 ${(Number(item.line_total) || 0).toFixed(2)}
               </div>
             </div>

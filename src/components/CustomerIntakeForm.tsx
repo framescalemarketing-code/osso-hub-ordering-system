@@ -102,18 +102,18 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
     onComplete(savedCustomer);
   }
 
-  const inputClass = "w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm";
-  const labelClass = "block text-sm font-medium text-gray-300 mb-1";
+  const inputClass = "w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm";
+  const labelClass = "block text-sm font-medium text-gray-700 mb-1";
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+    <div className="bg-white border border-gray-200 rounded-xl p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold">Customer Information</h2>
         <div className="flex gap-2">
-          <button onClick={() => setMode('search')} className={`px-3 py-1.5 rounded text-sm ${mode === 'search' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}>
+          <button onClick={() => setMode('search')} className={`px-3 py-1.5 rounded text-sm ${mode === 'search' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             Search Existing
           </button>
-          <button onClick={() => setMode('new')} className={`px-3 py-1.5 rounded text-sm ${mode === 'new' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}`}>
+          <button onClick={() => setMode('new')} className={`px-3 py-1.5 rounded text-sm ${mode === 'new' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             New Customer
           </button>
         </div>
@@ -128,6 +128,7 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
               onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
               placeholder="Search by name, email, or phone..."
+              suppressHydrationWarning
               className={inputClass + ' flex-1'}
             />
             <button onClick={handleSearch} className="px-4 py-2 bg-blue-600 rounded-lg text-sm font-medium">Search</button>
@@ -139,11 +140,11 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
                 <button
                   key={c.id}
                   onClick={() => onComplete(c)}
-                  className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
+                  className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition"
                 >
-                  <span className="font-medium">{c.first_name} {c.last_name}</span>
-                  {c.email && <span className="text-gray-400 ml-3 text-sm">{c.email}</span>}
-                  {c.phone && <span className="text-gray-400 ml-3 text-sm">{c.phone}</span>}
+                  <span className="font-medium text-gray-800">{c.first_name} {c.last_name}</span>
+                  {c.email && <span className="text-gray-500 ml-3 text-sm">{c.email}</span>}
+                  {c.phone && <span className="text-gray-500 ml-3 text-sm">{c.phone}</span>}
                 </button>
               ))}
             </div>
@@ -181,7 +182,7 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-300 mb-3">Address</h3>
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Address</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <input type="text" placeholder="Street" value={form.street} onChange={e => update('street', e.target.value)} className={inputClass} />
@@ -197,27 +198,27 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
           </div>
 
           {/* HIPAA / CCPA / Marketing Consent */}
-          <div className="bg-gray-800 rounded-lg p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-200">Consent & Compliance</h3>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-gray-700">Consent &amp; Compliance</h3>
             <label className="flex items-start gap-3 cursor-pointer">
               <input type="checkbox" checked={form.hipaa_consent} onChange={e => update('hipaa_consent', e.target.checked)} className="mt-1" />
               <div>
-                <p className="text-sm font-medium text-gray-200">HIPAA Authorization *</p>
-                <p className="text-xs text-gray-400">Customer authorizes use and disclosure of protected health information for treatment, payment, and operations.</p>
+                <p className="text-sm font-medium text-gray-800">HIPAA Authorization *</p>
+                <p className="text-xs text-gray-500">Customer authorizes use and disclosure of protected health information for treatment, payment, and operations.</p>
               </div>
             </label>
             <label className="flex items-start gap-3 cursor-pointer">
               <input type="checkbox" checked={form.ccpa_consent} onChange={e => update('ccpa_consent', e.target.checked)} className="mt-1" />
               <div>
-                <p className="text-sm font-medium text-gray-200">CCPA Acknowledgment *</p>
-                <p className="text-xs text-gray-400">Customer acknowledges their rights under the California Consumer Privacy Act. Personal information will not be sold.</p>
+                <p className="text-sm font-medium text-gray-800">CCPA Acknowledgment *</p>
+                <p className="text-xs text-gray-500">Customer acknowledges their rights under the California Consumer Privacy Act. Personal information will not be sold.</p>
               </div>
             </label>
             <label className="flex items-start gap-3 cursor-pointer">
               <input type="checkbox" checked={form.marketing_consent} onChange={e => update('marketing_consent', e.target.checked)} className="mt-1" />
               <div>
-                <p className="text-sm font-medium text-gray-200">Marketing Consent (Optional)</p>
-                <p className="text-xs text-gray-400">Customer agrees to receive marketing communications. Can opt out at any time.</p>
+                <p className="text-sm font-medium text-gray-800">Marketing Consent (Optional)</p>
+                <p className="text-xs text-gray-500">Customer agrees to receive marketing communications. Can opt out at any time.</p>
               </div>
             </label>
           </div>
@@ -225,7 +226,7 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
           <button
             onClick={handleSave}
             disabled={saving || !form.first_name || !form.last_name || !form.hipaa_consent || !form.ccpa_consent}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg font-semibold transition"
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition"
           >
             {saving ? 'Saving...' : 'Save & Continue'}
           </button>
