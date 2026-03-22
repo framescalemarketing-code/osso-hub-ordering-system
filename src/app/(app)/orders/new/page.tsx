@@ -140,6 +140,8 @@ export default function NewOrderPage() {
       {step === 'prescription' && customer && (
         <PrescriptionForm
           customerId={customer.id}
+          orderType={orderType}
+          programId={selectedProgramId}
           onComplete={(rx) => { setPrescription(rx); setStep('items'); }}
           onSkip={() => setStep('items')}
         />

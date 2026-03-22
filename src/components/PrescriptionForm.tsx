@@ -6,11 +6,13 @@ import type { Prescription } from '@/lib/types';
 
 interface Props {
   customerId: string;
+  orderType: 'regular' | 'program';
+  programId?: string | null;
   onComplete: (rx: Prescription) => void;
   onSkip: () => void;
 }
 
-export default function PrescriptionForm({ customerId, onComplete, onSkip }: Props) {
+export default function PrescriptionForm({ customerId, orderType, programId, onComplete, onSkip }: Props) {
   const supabase = createClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -46,37 +48,47 @@ export default function PrescriptionForm({ customerId, onComplete, onSkip }: Pro
 
   async function handleSave() {
     setSaving(true);
-    const toNum = (v: string) => v ? parseFloat(v) : null;
-    const toInt = (v: string) => v ? parseInt(v) : null;
+    const res = await fetch('/api/prescriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_id: customerId,
+        order_type: orderType,
+        program_id: orderType === 'program' ? programId : null,
+        od_sphere: rx.od_sphere || null,
+        od_cylinder: rx.od_cylinder || null,
+        od_axis: rx.od_axis || null,
+        od_add: rx.od_add || null,
+        od_prism: rx.od_prism || null,
+        od_prism_base: rx.od_prism_base || null,
+        os_sphere: rx.os_sphere || null,
+        os_cylinder: rx.os_cylinder || null,
+        os_axis: rx.os_axis || null,
+        os_add: rx.os_add || null,
+        os_prism: rx.os_prism || null,
+        os_prism_base: rx.os_prism_base || null,
+        pd_distance: rx.pd_distance || null,
+        pd_near: rx.pd_near || null,
+        pd_right: rx.pd_right || null,
+        pd_left: rx.pd_left || null,
+        prescriber_name: rx.prescriber_name || null,
+        prescriber_npi: rx.prescriber_npi || null,
+        rx_date: rx.rx_date || null,
+        expiration_date: rx.expiration_date || null,
+        pdf_storage_path: pdfPath,
+        notes: rx.notes || null,
+      }),
+    });
 
-    const { data, error } = await supabase.from('prescriptions').insert({
-      customer_id: customerId,
-      od_sphere: toNum(rx.od_sphere), od_cylinder: toNum(rx.od_cylinder), od_axis: toInt(rx.od_axis),
-      od_add: toNum(rx.od_add), od_prism: toNum(rx.od_prism), od_prism_base: rx.od_prism_base || null,
-      os_sphere: toNum(rx.os_sphere), os_cylinder: toNum(rx.os_cylinder), os_axis: toInt(rx.os_axis),
-      os_add: toNum(rx.os_add), os_prism: toNum(rx.os_prism), os_prism_base: rx.os_prism_base || null,
-      pd_distance: toNum(rx.pd_distance), pd_near: toNum(rx.pd_near),
-      pd_right: toNum(rx.pd_right), pd_left: toNum(rx.pd_left),
-      prescriber_name: rx.prescriber_name || null, prescriber_npi: rx.prescriber_npi || null,
-      rx_date: rx.rx_date || null, expiration_date: rx.expiration_date || null,
-      pdf_storage_path: pdfPath,
-      notes: rx.notes || null,
-      is_current: true,
-    }).select().single();
-
-    if (error) {
-      alert('Error: ' + error.message);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: 'Failed to save prescription' }));
+      alert('Error: ' + (body.error || 'Failed to save prescription'));
       setSaving(false);
       return;
     }
 
-    // Mark previous prescriptions as not current
-    await supabase.from('prescriptions')
-      .update({ is_current: false })
-      .eq('customer_id', customerId)
-      .neq('id', data.id);
-
-    onComplete(data as Prescription);
+    const { prescription } = (await res.json()) as { prescription: Prescription };
+    onComplete(prescription);
   }
 
   const inputClass = "w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent";
