@@ -96,7 +96,7 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold">Prescription</h2>
         <button onClick={onSkip} className="text-sm text-gray-500 hover:text-gray-800">
           Skip (no Rx needed)
@@ -124,7 +124,7 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
 
       {/* Right Eye */}
       <h3 className="text-sm font-semibold text-gray-700 mb-3">OD (Right Eye)</h3>
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-5">
         <div><label className={labelClass}>Sphere</label><input type="number" step="0.25" value={rx.od_sphere} onChange={e => update('od_sphere', e.target.value)} className={inputClass} /></div>
         <div><label className={labelClass}>Cylinder</label><input type="number" step="0.25" value={rx.od_cylinder} onChange={e => update('od_cylinder', e.target.value)} className={inputClass} /></div>
         <div><label className={labelClass}>Axis</label><input type="number" step="1" min="0" max="180" value={rx.od_axis} onChange={e => update('od_axis', e.target.value)} className={inputClass} /></div>
@@ -135,7 +135,7 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
 
       {/* Left Eye */}
       <h3 className="text-sm font-semibold text-gray-700 mb-3">OS (Left Eye)</h3>
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-5">
         <div><label className={labelClass}>Sphere</label><input type="number" step="0.25" value={rx.os_sphere} onChange={e => update('os_sphere', e.target.value)} className={inputClass} /></div>
         <div><label className={labelClass}>Cylinder</label><input type="number" step="0.25" value={rx.os_cylinder} onChange={e => update('os_cylinder', e.target.value)} className={inputClass} /></div>
         <div><label className={labelClass}>Axis</label><input type="number" step="1" min="0" max="180" value={rx.os_axis} onChange={e => update('os_axis', e.target.value)} className={inputClass} /></div>
@@ -146,7 +146,7 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
 
       {/* PD */}
       <h3 className="text-sm font-semibold text-gray-700 mb-3">Pupillary Distance</h3>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <div><label className={labelClass}>Distance PD</label><input type="number" step="0.5" value={rx.pd_distance} onChange={e => update('pd_distance', e.target.value)} className={inputClass} /></div>
         <div><label className={labelClass}>Near PD</label><input type="number" step="0.5" value={rx.pd_near} onChange={e => update('pd_near', e.target.value)} className={inputClass} /></div>
         <div><label className={labelClass}>Right PD</label><input type="number" step="0.5" value={rx.pd_right} onChange={e => update('pd_right', e.target.value)} className={inputClass} /></div>

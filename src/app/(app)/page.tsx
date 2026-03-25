@@ -33,7 +33,7 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <Link
           href="/orders/new"
@@ -57,7 +57,7 @@ export default async function DashboardPage() {
           <h2 className="text-lg font-semibold text-gray-800">Recent Orders</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-gray-500">
                 <th className="text-left px-4 py-3">Order #</th>

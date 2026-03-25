@@ -20,9 +20,6 @@ type CustomerFormState = {
   city: string;
   state: string;
   zip: string;
-  hipaa_consent: boolean;
-  ccpa_consent: boolean;
-  marketing_consent: boolean;
 };
 
 export default function CustomerIntakeForm({ onComplete, existingCustomer }: Props) {
@@ -44,9 +41,6 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
     city: address?.city || '',
     state: address?.state || '',
     zip: address?.zip || '',
-    hipaa_consent: existingCustomer?.hipaa_consent_signed || false,
-    ccpa_consent: existingCustomer?.ccpa_consent_signed || false,
-    marketing_consent: existingCustomer?.marketing_consent || false,
   });
 
   async function handleSearch() {
@@ -65,8 +59,6 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
 
   async function handleSave() {
     setSaving(true);
-    const now = new Date().toISOString();
-
     const payload = {
       first_name: form.first_name.trim(),
       last_name: form.last_name.trim(),
@@ -75,12 +67,6 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
       date_of_birth: form.date_of_birth || null,
       employer: form.employer.trim() || null,
       address: form.street ? { street: form.street, city: form.city, state: form.state, zip: form.zip } : null,
-      hipaa_consent_signed: form.hipaa_consent,
-      hipaa_consent_date: form.hipaa_consent ? now : null,
-      ccpa_consent_signed: form.ccpa_consent,
-      ccpa_consent_date: form.ccpa_consent ? now : null,
-      marketing_consent: form.marketing_consent,
-      marketing_consent_date: form.marketing_consent ? now : null,
     };
 
     const { data, error } = await supabase.from('customers').insert(payload).select().single();
@@ -92,13 +78,6 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
       return;
     }
 
-    // Log consents
-    const consents: Array<{ customer_id: string; consent_type: 'hipaa' | 'ccpa' | 'marketing'; granted: true }> = [];
-    if (form.hipaa_consent) consents.push({ customer_id: savedCustomer.id, consent_type: 'hipaa', granted: true });
-    if (form.ccpa_consent) consents.push({ customer_id: savedCustomer.id, consent_type: 'ccpa', granted: true });
-    if (form.marketing_consent) consents.push({ customer_id: savedCustomer.id, consent_type: 'marketing', granted: true });
-    if (consents.length) await supabase.from('consent_log').insert(consents);
-
     onComplete(savedCustomer);
   }
 
@@ -107,9 +86,9 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-6" suppressHydrationWarning>
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold">Customer Information</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button suppressHydrationWarning onClick={() => setMode('search')} className={`px-3 py-1.5 rounded text-sm ${mode === 'search' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             Search Existing
           </button>
@@ -121,7 +100,7 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
 
       {mode === 'search' && (
         <div className="mb-6">
-          <div className="flex gap-2 mb-4">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row">
             <input
               type="text"
               value={searchQuery}
@@ -197,35 +176,9 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
             </div>
           </div>
 
-          {/* HIPAA / CCPA / Marketing Consent */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-700">Consent &amp; Compliance</h3>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input type="checkbox" checked={form.hipaa_consent} onChange={e => update('hipaa_consent', e.target.checked)} className="mt-1" />
-              <div>
-                <p className="text-sm font-medium text-gray-800">HIPAA Authorization *</p>
-                <p className="text-xs text-gray-500">Customer authorizes use and disclosure of protected health information for treatment, payment, and operations.</p>
-              </div>
-            </label>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input type="checkbox" checked={form.ccpa_consent} onChange={e => update('ccpa_consent', e.target.checked)} className="mt-1" />
-              <div>
-                <p className="text-sm font-medium text-gray-800">CCPA Acknowledgment *</p>
-                <p className="text-xs text-gray-500">Customer acknowledges their rights under the California Consumer Privacy Act. Personal information will not be sold.</p>
-              </div>
-            </label>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input type="checkbox" checked={form.marketing_consent} onChange={e => update('marketing_consent', e.target.checked)} className="mt-1" />
-              <div>
-                <p className="text-sm font-medium text-gray-800">Marketing Consent (Optional)</p>
-                <p className="text-xs text-gray-500">Customer agrees to receive marketing communications. Can opt out at any time.</p>
-              </div>
-            </label>
-          </div>
-
           <button
             onClick={handleSave}
-            disabled={saving || !form.first_name || !form.last_name || !form.hipaa_consent || !form.ccpa_consent}
+            disabled={saving || !form.first_name || !form.last_name}
             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition"
           >
             {saving ? 'Saving...' : 'Save & Continue'}

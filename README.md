@@ -1,69 +1,107 @@
-# OSSO Hub — Ordering System
+# OSSO Hub Ordering System
 
-A full-stack Point of Sale system for **On-Sight Safety Optics** — handles customer intake, prescriptions (with PDF upload), glasses orders (safety Rx, non-Rx, non-safety), two order flows (regular customers + program employees with approvals), and syncs to all downstream systems.
+Full-stack ordering workflow for On-Sight Safety Optics:
+- Customer intake + prescription capture
+- Regular and program order flows
+- Program enrollment linkage + approvals
+- Downstream integration sync queue (ClickUp, NetSuite, QuickBooks, BigQuery, Mailchimp)
 
-## Stack
+## Tech stack
 
-- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS
-- **Database**: Supabase (PostgreSQL + Auth + Storage + RLS)
-- **Data Warehouse**: Google BigQuery
-- **Integrations**: ClickUp, NetSuite, QuickBooks, Mailchimp, Nassau, ABB Optical
-- **Email**: Resend
-- **Compliance**: HIPAA + California CCPA
+- Next.js 16 (App Router) + TypeScript + Tailwind
+- Supabase (Postgres, Auth, RLS, Storage)
+- Integrations: ClickUp, NetSuite, QuickBooks, BigQuery, Mailchimp, Resend
 
-## Setup
+## Local setup
 
-### 1. Install
-
+1. Install dependencies:
 ```bash
-cd osso-hub-ordering-system
 npm install
 ```
 
-### 2. Supabase
-
-1. Create a project at [supabase.com](https://supabase.com)
-2. Go to SQL Editor and paste the contents of `supabase/migrations/001_initial_schema.sql`
-3. Run the SQL to create all tables, RLS policies, and storage buckets
-4. Go to Settings → API to get your URL and keys
-
-### 3. Environment Variables
-
+2. Configure environment variables:
 ```bash
 cp .env.example .env.local
 ```
 
-Fill in your Supabase keys + any integration API keys.
+3. Run database migrations in order (`001` through latest) in your Supabase SQL editor.
 
-### 4. Create First Employee
-
-In Supabase dashboard:
-1. Go to Authentication → Users → Invite User
-2. After setting password, run in SQL Editor:
-
+4. Create your first employee row (after inviting auth user):
 ```sql
 INSERT INTO employees (auth_user_id, email, first_name, last_name, role)
 VALUES ('YOUR_AUTH_USER_UUID', 'your@email.com', 'Your', 'Name', 'admin');
 ```
 
-### 5. Run
-
+5. Start dev server:
 ```bash
 npm run dev
 ```
 
-## Integrations (Plug-and-Play)
+## Required environment variables
 
-Each integration activates when its API keys are present in `.env.local`. Leave blank to disable.
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SECRET_KEY`
+- `JOB_RUNNER_SECRET` (used to secure `/api/jobs/process` and `/api/reminders/process`)
 
-| Integration | Required Keys |
-|---|---|
-| **Supabase** | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` |
-| **ClickUp** | `CLICKUP_API_KEY`, `CLICKUP_LIST_ID` |
-| **BigQuery** | `GOOGLE_CLOUD_PROJECT_ID`, `GOOGLE_APPLICATION_CREDENTIALS` |
-| **NetSuite** | `NETSUITE_ACCOUNT_ID`, `NETSUITE_CONSUMER_KEY`, etc. |
-| **QuickBooks** | `QUICKBOOKS_CLIENT_ID`, `QUICKBOOKS_REALM_ID`, etc. |
-| **Mailchimp** | `MAILCHIMP_API_KEY`, `MAILCHIMP_SERVER_PREFIX`, `MAILCHIMP_LIST_ID` |
-| **Nassau** | `NASSAU_API_URL`, `NASSAU_API_KEY` |
-| **ABB Optical** | `ABB_OPTICAL_API_URL`, `ABB_OPTICAL_API_KEY` |
-| **Resend** | `RESEND_API_KEY`, `EMAIL_FROM` |
+## BigQuery
+
+BigQuery writes are optional and activate when `GOOGLE_CLOUD_PROJECT_ID` is set. The code uses Application Default Credentials at runtime, so local auth can be handled with `gcloud auth application-default login`.
+
+On the first successful sync, the app will create or evolve these tables in the target dataset:
+
+- `orders`
+- `order_items`
+- `customers`
+- `programs`
+
+The schema is additive. New columns can be introduced without breaking existing data, and streaming inserts use stable `insertId` values to avoid duplicate rows during retries.
+
+Recommended env values:
+
+- `GOOGLE_CLOUD_PROJECT_ID`
+- `BIGQUERY_DATASET` defaulting to `osso_hub`
+
+Operational notes:
+
+- If the dataset does not exist yet, the app creates it automatically.
+- Unknown extra fields are ignored on insert so future schema additions stay safe.
+
+## Supabase Operational Setup
+
+- Run the full migration set through `011_supabase_hardening_and_indexes.sql`.
+- Keep the client on `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and the server on `SUPABASE_SECRET_KEY`.
+- Enable leaked password protection in Supabase Auth settings.
+- Use the new search and recency indexes when validating customer, program, order, and enrollment flows at scale.
+- Keep `JOB_RUNNER_SECRET` aligned with your cron configuration so scheduled processors stay locked down.
+
+## Integration job queue
+
+Order integrations are enqueued in `integration_jobs` and processed by `/api/jobs/process`:
+- Retries with exponential backoff
+- Writes success/failure records to `sync_log`
+- Updates order external IDs when integrations succeed
+
+## Scheduler / server readiness
+
+`vercel.json` includes cron jobs:
+- `*/5 * * * *` -> `/api/jobs/process`
+- `*/30 * * * *` -> `/api/reminders/process`
+
+Set `CRON_SECRET` in Vercel and keep `JOB_RUNNER_SECRET` aligned so cron calls are authorized.
+
+## Quality automation
+
+- GitHub Actions CI (`.github/workflows/ci.yml`): push/PR validation with cached install, lint, typecheck, and build
+- Daily Health (`.github/workflows/daily-health.yml`): daily smoke test plus an issue when the scheduled run fails
+- Security (`.github/workflows/security.yml`): CodeQL, dependency review, and npm audit
+- Autofix (`.github/workflows/autofix.yml`): daily conservative PRs for lint fixes and lockfile maintenance
+- Dependabot (`.github/dependabot.yml`): daily npm updates and weekly GitHub Actions updates
+
+## Commands
+
+- `npm run dev`
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+- `npm run start`

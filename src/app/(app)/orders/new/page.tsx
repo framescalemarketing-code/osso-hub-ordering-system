@@ -70,7 +70,7 @@ export default function NewOrderPage() {
       <h1 className="text-2xl font-bold mb-6">New Order</h1>
 
       {/* Order Type Toggle */}
-      <div className="flex gap-3 mb-6">
+      <div className="mb-6 flex flex-wrap gap-3">
         <button
           onClick={() => setOrderType('regular')}
           className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
@@ -107,22 +107,24 @@ export default function NewOrderPage() {
       )}
 
       {/* Step Indicators */}
-      <div className="flex gap-2 mb-8">
-        {(['customer', 'prescription', 'items', 'review'] as Step[]).map((s, i) => (
-          <div
-            key={s}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
-              step === s ? 'bg-blue-50 text-blue-600 border border-blue-200' :
-              (['customer', 'prescription', 'items', 'review'].indexOf(step) > i)
-                ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
-            }`}
-          >
-            <span className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-xs">
-              {i + 1}
-            </span>
-            <span className="capitalize">{s}</span>
-          </div>
-        ))}
+      <div className="mb-8 overflow-x-auto">
+        <div className="flex min-w-max gap-2 pb-1">
+          {(['customer', 'prescription', 'items', 'review'] as Step[]).map((s, i) => (
+            <div
+              key={s}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
+                step === s ? 'bg-blue-50 text-blue-600 border border-blue-200' :
+                (['customer', 'prescription', 'items', 'review'].indexOf(step) > i)
+                  ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+              }`}
+            >
+              <span className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-xs">
+                {i + 1}
+              </span>
+              <span className="capitalize">{s}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {error && (
@@ -183,24 +185,26 @@ export default function NewOrderPage() {
               )}
             </div>
 
-            <table className="w-full text-sm mb-4">
-              <thead>
-                <tr className="border-b border-gray-200 text-gray-500">
-                  <th className="text-left py-2">Item</th>
-                  <th className="text-left py-2">Type</th>
-                  <th className="text-right py-2">Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, idx) => (
-                  <tr key={idx} className="border-b border-gray-100">
-                    <td className="py-2">{item.frame_brand} {item.frame_model}</td>
-                    <td className="py-2 capitalize">{item.glasses_type?.replace(/_/g, ' ')}</td>
-                    <td className="py-2 text-right">${Number(item.line_total || 0).toFixed(2)}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] text-sm mb-4">
+                <thead>
+                  <tr className="border-b border-gray-200 text-gray-500">
+                    <th className="text-left py-2">Item</th>
+                    <th className="text-left py-2">Type</th>
+                    <th className="text-right py-2">Price</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {items.map((item, idx) => (
+                    <tr key={idx} className="border-b border-gray-100">
+                      <td className="py-2">{item.frame_brand} {item.frame_model}</td>
+                      <td className="py-2 capitalize">{item.glasses_type?.replace(/_/g, ' ')}</td>
+                      <td className="py-2 text-right">${Number(item.line_total || 0).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <div className="text-right space-y-1 text-sm">
               <p>Subtotal: <span className="font-medium">${subtotal.toFixed(2)}</span></p>
@@ -209,7 +213,7 @@ export default function NewOrderPage() {
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setStep('items')}
               className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition"

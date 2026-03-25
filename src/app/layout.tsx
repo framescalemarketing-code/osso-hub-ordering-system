@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "OSSO Hub — Ordering System",
-  description: "HIPAA & CCPA compliant point-of-sale and order management",
+  title: 'OSSO Hub - Ordering System',
+  description: 'Internal point-of-sale and order management',
 };
 
 export default function RootLayout({

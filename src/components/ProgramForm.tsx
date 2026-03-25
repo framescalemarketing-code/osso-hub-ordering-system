@@ -71,7 +71,7 @@ export default function ProgramForm() {
         <input type="checkbox" checked={form.approval_required} onChange={e => update('approval_required', e.target.checked)} />
         Require approval before processing
       </label>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium">{saving ? 'Saving...' : 'Save'}</button>
         <button onClick={() => setOpen(false)} className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm">Cancel</button>
       </div>

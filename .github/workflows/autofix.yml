@@ -1,0 +1,75 @@
+name: Autofix
+
+on:
+  schedule:
+    - cron: '53 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: autofix-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.9.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Cache Next build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-autofix-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'eslint.config.mjs', 'src/**/*.ts', 'src/**/*.tsx', 'src/**/*.js', 'src/**/*.jsx') }}
+          restore-keys: |
+            ${{ runner.os }}-autofix-${{ hashFiles('package-lock.json') }}-
+            ${{ runner.os }}-autofix-
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Apply safe lint fixes
+        run: npm run lint -- --fix
+
+      - name: Apply lockfile maintenance
+        run: npm audit fix --package-lock-only
+
+      - name: Verify fixes
+        run: |
+          npm run lint
+          npm run typecheck
+          npm run build
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ github.token }}
+          branch: automation/autofix
+          delete-branch: true
+          commit-message: chore: automated lint and lockfile fixes
+          title: chore: automated lint and lockfile fixes
+          body: |
+            This PR was created by the scheduled autofix workflow.
+
+            It includes conservative fixes only:
+            - ESLint auto-fixes
+            - package-lock maintenance from `npm audit fix --package-lock-only`
+
+            Validation:
+            - lint
+            - typecheck
+            - build

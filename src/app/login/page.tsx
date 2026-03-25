@@ -75,8 +75,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md bg-white rounded-2xl p-8 shadow-sm border border-gray-200">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-200">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">OSSO Hub</h1>
           <p className="text-gray-500 mt-2">Point of Sale System</p>
@@ -140,9 +140,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <p className="text-center text-gray-400 text-xs mt-6">
-          HIPAA &amp; CCPA Compliant | Encrypted | Audited
-        </p>
+        <p className="text-center text-gray-400 text-xs mt-6">Internal Use Only | Encrypted | Audited</p>
       </div>
     </div>
   );

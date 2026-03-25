@@ -1,59 +1,120 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { integrations } from '@/lib/integrations/config';
+import { claimDueReminders, runWithConcurrencyLimit } from '@/lib/integrations/job-runner';
 
-// Cron endpoint — process pending reminders
-// Call via Supabase Edge Functions cron or external cron service
-export async function POST() {
-  const supabase = createServiceClient();
-  const now = new Date().toISOString();
+function isAuthorized(request: NextRequest): boolean {
+  const secret = process.env.JOB_RUNNER_SECRET;
+  if (!secret) return false;
 
-  const { data: reminders } = await supabase
-    .from('reminders')
-    .select('*, customer:customers(first_name, last_name, email, phone), order:orders(order_number)')
-    .eq('status', 'pending')
-    .lte('due_at', now)
-    .limit(50);
+  const headerSecret = request.headers.get('x-job-secret');
+  if (headerSecret && headerSecret === secret) return true;
 
-  if (!reminders?.length) {
-    return NextResponse.json({ processed: 0 });
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader) return false;
+  return authHeader === `Bearer ${secret}`;
+}
+
+const CLAIM_BATCH_SIZE = 50;
+const MAX_REMINDERS_PER_RUN = 200;
+const CONCURRENCY = 5;
+
+export async function POST(request: NextRequest) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: 'Unauthorized job runner request' }, { status: 401 });
   }
 
+  const supabase = createServiceClient();
   if (!integrations.resend.enabled()) {
     return NextResponse.json({ error: 'Email not configured' }, { status: 500 });
   }
 
   const { Resend } = await import('resend');
   const resend = new Resend(integrations.resend.apiKey());
+  const workerId = `reminder-runner:${process.pid}:${Date.now()}`;
   let sent = 0;
+  let claimed = 0;
+  let failed = 0;
 
-  for (const reminder of reminders) {
-    const email = reminder.customer?.email;
-    if (!email) continue;
+  while (claimed < MAX_REMINDERS_PER_RUN) {
+    const remaining = MAX_REMINDERS_PER_RUN - claimed;
+    const batchSize = Math.min(CLAIM_BATCH_SIZE, remaining);
+    const reminders = await claimDueReminders(supabase, {
+      workerId,
+      limit: batchSize,
+      staleAfterMinutes: 30,
+    });
 
-    try {
-      await resend.emails.send({
-        from: integrations.resend.from(),
-        to: email,
-        subject: reminder.subject,
-        html: `
-          <p>Hi ${reminder.customer.first_name},</p>
-          <p>${reminder.body || reminder.subject}</p>
-          ${reminder.order ? `<p>Reference: Order ${reminder.order.order_number}</p>` : ''}
-          <p style="color:#999;font-size:12px">OSSO — On-Sight Safety Optics</p>
-        `,
-      });
+    if (!reminders.length) {
+      break;
+    }
 
-      await supabase.from('reminders').update({
-        status: 'sent',
-        sent_at: new Date().toISOString(),
-      }).eq('id', reminder.id);
+    claimed += reminders.length;
 
-      sent++;
-    } catch {
-      // Will retry next cron run
+    await runWithConcurrencyLimit(reminders, CONCURRENCY, async (reminder) => {
+      const email = reminder.customer_email;
+      if (!email) {
+        await supabase
+          .from('reminders')
+          .update({
+            status: 'pending',
+            processing_at: null,
+            processing_by: null,
+            last_error: 'Missing customer email',
+          })
+          .eq('id', reminder.id);
+        failed++;
+        return;
+      }
+
+      try {
+        await resend.emails.send({
+          from: integrations.resend.from(),
+          to: email,
+          subject: reminder.subject,
+          html: `
+            <p>Hi ${reminder.customer_first_name || 'there'},</p>
+            <p>${reminder.body || reminder.subject}</p>
+            ${reminder.order_number ? `<p>Reference: Order ${reminder.order_number}</p>` : ''}
+            <p style="color:#999;font-size:12px">OSSO - On-Sight Safety Optics</p>
+          `,
+        });
+
+        await supabase
+          .from('reminders')
+          .update({
+            status: 'sent',
+            sent_at: new Date().toISOString(),
+            processing_at: null,
+            processing_by: null,
+            last_error: null,
+          })
+          .eq('id', reminder.id);
+
+        sent++;
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Failed to send reminder';
+        await supabase
+          .from('reminders')
+          .update({
+            status: 'pending',
+            processing_at: null,
+            processing_by: null,
+            last_error: message,
+          })
+          .eq('id', reminder.id);
+        failed++;
+      }
+    });
+
+    if (reminders.length < batchSize) {
+      break;
     }
   }
 
-  return NextResponse.json({ processed: sent, total: reminders.length });
+  return NextResponse.json({ processed: sent, claimed, failed });
+}
+
+export async function GET(request: NextRequest) {
+  return POST(request);
 }

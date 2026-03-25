@@ -50,7 +50,7 @@ export default function GlassesOrderItems({ items, onChange, onComplete }: Props
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold">Order Items</h2>
         <button onClick={addItem} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition">
           + Add Glasses
@@ -87,7 +87,7 @@ export default function GlassesOrderItems({ items, onChange, onComplete }: Props
 
           {/* Frame */}
           <h4 className="text-xs font-semibold text-gray-500 mb-2 mt-4">Frame</h4>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
             <div><label className={labelClass}>Brand</label><input type="text" value={item.frame_brand || ''} onChange={e => updateItem(idx, 'frame_brand', e.target.value)} className={inputClass} /></div>
             <div><label className={labelClass}>Model</label><input type="text" value={item.frame_model || ''} onChange={e => updateItem(idx, 'frame_model', e.target.value)} className={inputClass} /></div>
             <div><label className={labelClass}>Color</label><input type="text" value={item.frame_color || ''} onChange={e => updateItem(idx, 'frame_color', e.target.value)} className={inputClass} /></div>
@@ -97,7 +97,7 @@ export default function GlassesOrderItems({ items, onChange, onComplete }: Props
 
           {/* Lens */}
           <h4 className="text-xs font-semibold text-gray-500 mb-2">Lens</h4>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
             <div><label className={labelClass}>Lens Type</label><input type="text" value={item.lens_type || ''} onChange={e => updateItem(idx, 'lens_type', e.target.value)} className={inputClass} placeholder="SV, Bifocal, Progressive" /></div>
             <div><label className={labelClass}>Material</label><input type="text" value={item.lens_material || ''} onChange={e => updateItem(idx, 'lens_material', e.target.value)} className={inputClass} placeholder="Poly, Trivex, Hi-index" /></div>
             <div><label className={labelClass}>Coatings</label><input type="text" value={(item.lens_coating || []).join(', ')} onChange={e => updateItem(idx, 'lens_coating', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} className={inputClass} placeholder="AR, Scratch, Blue-cut" /></div>
@@ -105,7 +105,7 @@ export default function GlassesOrderItems({ items, onChange, onComplete }: Props
             <div><label className={labelClass}>Lens Price</label><input type="number" step="0.01" value={item.lens_price || ''} onChange={e => updateItem(idx, 'lens_price', parseFloat(e.target.value) || 0)} className={inputClass} /></div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div><label className={labelClass}>Quantity</label><input type="number" min="1" value={item.quantity || 1} onChange={e => updateItem(idx, 'quantity', parseInt(e.target.value) || 1)} className={inputClass} /></div>
             <div><label className={labelClass}>Notes</label><input type="text" value={item.notes || ''} onChange={e => updateItem(idx, 'notes', e.target.value)} className={inputClass} /></div>
             <div>

@@ -83,6 +83,10 @@ const PROGRAM_SCHEMA: BigQueryField[] = [
   { name: 'billing_city', type: 'STRING' },
   { name: 'billing_state', type: 'STRING' },
   { name: 'billing_zip', type: 'STRING' },
+  { name: 'location_street', type: 'STRING' },
+  { name: 'location_city', type: 'STRING' },
+  { name: 'location_state', type: 'STRING' },
+  { name: 'location_zip', type: 'STRING' },
   { name: 'shipping_street', type: 'STRING' },
   { name: 'shipping_city', type: 'STRING' },
   { name: 'shipping_state', type: 'STRING' },
@@ -143,6 +147,7 @@ const ORDER_SCHEMA: BigQueryField[] = [
   { name: 'shipping_state', type: 'STRING' },
   { name: 'shipping_zip', type: 'STRING' },
   { name: 'internal_notes', type: 'STRING' },
+  { name: 'customer_profile_notes', type: 'STRING' },
   { name: 'customer_notes', type: 'STRING' },
   { name: 'prescription_id', type: 'STRING' },
   { name: 'bigquery_sync_source', type: 'STRING' },
@@ -189,48 +194,65 @@ export async function writeOrderToBigQuery(order: BigQueryOrderContext) {
   const orderRow = buildOrderRow(order, program, syncedAt);
   const orderItemRows = order.items.map((item) => buildOrderItemRow(order, program, item, syncedAt));
 
-  await ordersTable.insert([buildInsertRow(orderRow, `order:${order.id}`)], {
-    raw: true,
-    createInsertId: false,
-    ignoreUnknownValues: true,
-    partialRetries: 3,
-  });
-
-  await customersTable.insert(
-    [buildInsertRow(customerRow, `customer:${String(customerRow.customer_id)}:${String(customerRow.source_customer_updated_at || order.customer.updated_at)}`)],
-    {
+  const writes = [
+    ordersTable.insert([buildInsertRow(orderRow, `order:${order.id}`)], {
       raw: true,
       createInsertId: false,
       ignoreUnknownValues: true,
       partialRetries: 3,
-    }
-  );
-
-  if (programRow) {
-    await programsTable.insert(
-      [buildInsertRow(programRow, `program:${String(programRow.program_id)}:${String(programRow.source_program_updated_at || syncedAt)}`)],
+    }),
+    customersTable.insert(
+      [
+        buildInsertRow(
+          customerRow,
+          `customer:${String(customerRow.customer_id)}:${String(customerRow.source_customer_updated_at || order.customer.updated_at)}`
+        ),
+      ],
       {
         raw: true,
         createInsertId: false,
         ignoreUnknownValues: true,
         partialRetries: 3,
       }
+    ),
+  ];
+
+  if (programRow) {
+    writes.push(
+      programsTable.insert(
+        [buildInsertRow(programRow, `program:${String(programRow.program_id)}:${String(programRow.source_program_updated_at || syncedAt)}`)],
+        {
+          raw: true,
+          createInsertId: false,
+          ignoreUnknownValues: true,
+          partialRetries: 3,
+        }
+      )
     );
   }
 
   if (orderItemRows.length) {
-    await orderItemsTable.insert(
-      orderItemRows.map((row) =>
-        buildInsertRow(row, `order_item:${String(row.item_id)}:${String(row.source_order_updated_at || syncedAt)}`)
-      ),
-      {
-        raw: true,
-        createInsertId: false,
-        ignoreUnknownValues: true,
-        partialRetries: 3,
-      }
+    writes.push(
+      orderItemsTable.insert(
+        orderItemRows.map((row) =>
+          buildInsertRow(row, `order_item:${String(row.item_id)}:${String(row.source_order_updated_at || syncedAt)}`)
+        ),
+        {
+          raw: true,
+          createInsertId: false,
+          ignoreUnknownValues: true,
+          partialRetries: 3,
+        }
+      )
     );
   }
+
+  await Promise.all(writes);
+}
+
+export async function ensureBigQuerySyncSchema() {
+  if (!integrations.bigquery.enabled()) return null;
+  return getBigQueryTargets();
 }
 
 async function getBigQueryTargets(): Promise<BigQueryTargets> {
@@ -368,6 +390,10 @@ function buildProgramRow(order: BigQueryOrderContext, program: ExtendedProgram, 
     billing_city: program.billing_address?.city ?? null,
     billing_state: program.billing_address?.state ?? null,
     billing_zip: program.billing_address?.zip ?? null,
+    location_street: program.location_address?.street ?? null,
+    location_city: program.location_address?.city ?? null,
+    location_state: program.location_address?.state ?? null,
+    location_zip: program.location_address?.zip ?? null,
     shipping_street: program.shipping_address?.street ?? null,
     shipping_city: program.shipping_address?.city ?? null,
     shipping_state: program.shipping_address?.state ?? null,
@@ -404,7 +430,7 @@ function buildOrderRow(order: BigQueryOrderContext, program: ExtendedProgram | n
     customer_phone: order.customer.phone,
     customer_date_of_birth: order.customer.date_of_birth,
     customer_company_name: order.customer.employer,
-    customer_notes: order.customer.notes,
+    customer_profile_notes: order.customer.notes,
     customer_marketing_consent: order.customer.marketing_consent,
     customer_program_id: customerProgram?.id ?? null,
     customer_program_name: customerProgram?.company_name ?? null,
