@@ -41,7 +41,11 @@ function getProgramTypeLabel(program?: { approval_required: boolean; program_typ
   return program.program_type?.trim() || (program.approval_required ? 'Approval Required' : 'Direct');
 }
 
-export default async function CustomerProfilePage({ params }: PageProps<'/customers/[id]'>) {
+type CustomerProfilePageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function CustomerProfilePage({ params }: CustomerProfilePageProps) {
   const { id } = await params;
   const supabase = await createServerSupabaseClient();
 
