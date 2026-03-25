@@ -19,13 +19,14 @@ export async function POST(request: NextRequest) {
   if (!employee) return NextResponse.json({ error: 'Employee not found' }, { status: 403 });
 
   const body = await request.json();
-  const { order_type, customer_id, program_id, prescription_id, items, shipping_address } = body as {
+  const { order_type, customer_id, program_id, prescription_id, items, shipping_address, discount } = body as {
     order_type: Order['order_type'];
     customer_id: string;
     program_id?: string | null;
     prescription_id?: string | null;
     items: OrderInputItem[];
     shipping_address?: Order['shipping_address'];
+    discount?: number;
   };
 
   if (!customer_id || !items?.length) {
@@ -33,8 +34,10 @@ export async function POST(request: NextRequest) {
   }
 
   const subtotal = items.reduce((sum, i) => sum + (Number(i.line_total) || 0), 0);
-  const tax = Math.round(subtotal * 0.0875 * 100) / 100;
-  const total = subtotal + tax;
+  const normalizedDiscount = Math.min(Math.max(Number(discount) || 0, 0), subtotal);
+  const taxableSubtotal = Math.max(subtotal - normalizedDiscount, 0);
+  const tax = Math.round(taxableSubtotal * 0.0875 * 100) / 100;
+  const total = taxableSubtotal + tax;
 
   let status = 'processing';
   let program: { approval_required?: boolean; approver_emails?: string[] } | null = null;
@@ -63,7 +66,7 @@ export async function POST(request: NextRequest) {
       prescription_id: prescription_id || null,
       subtotal,
       tax,
-      discount: 0,
+      discount: normalizedDiscount,
       total,
       shipping_address: shipping_address || null,
     })

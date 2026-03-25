@@ -23,6 +23,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'order_type must be regular or program' }, { status: 400 });
   }
 
+  if (!body.expiration_date) {
+    return NextResponse.json({ error: 'expiration_date is required' }, { status: 400 });
+  }
+
   if (body.order_type === 'program' && !body.program_id) {
     return NextResponse.json(
       { error: 'program_id is required when order_type is program' },

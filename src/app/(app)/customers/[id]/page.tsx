@@ -2,11 +2,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { Address, Customer, Order, Prescription, Program } from '@/lib/types';
+import CustomerProfileManager from '@/components/CustomerProfileManager';
 
 type CustomerDetail = Customer & {
   program?: Pick<
     Program,
-    'id' | 'company_name' | 'approval_required' | 'invoice_terms' | 'notes' | 'billing_address' | 'shipping_address'
+    'id' | 'company_name' | 'approval_required' | 'invoice_terms' | 'notes' | 'billing_address' | 'shipping_address' | 'program_type'
   > | null;
   orders?: Array<
     Pick<
@@ -41,14 +42,18 @@ function getProgramTypeLabel(program?: { approval_required: boolean; program_typ
   return program.program_type?.trim() || (program.approval_required ? 'Approval Required' : 'Direct');
 }
 
-export default async function CustomerProfilePage({ params }: PageProps<'/customers/[id]'>) {
+type CustomerProfilePageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function CustomerProfilePage({ params }: CustomerProfilePageProps) {
   const { id } = await params;
   const supabase = await createServerSupabaseClient();
 
   const { data: customer } = await supabase
     .from('customers')
     .select(
-      '*, program:programs(id, company_name, approval_required, invoice_terms, notes, billing_address, shipping_address), orders:orders(id, order_number, order_type, status, total, created_at, internal_notes, customer_notes, program:programs(company_name)), prescriptions:prescriptions(*)'
+      '*, program:programs(id, company_name, approval_required, invoice_terms, notes, billing_address, shipping_address, program_type), orders:orders(id, order_number, order_type, status, total, created_at, internal_notes, customer_notes, program:programs(company_name)), prescriptions:prescriptions(*)'
     )
     .eq('id', id)
     .single();
@@ -102,7 +107,7 @@ export default async function CustomerProfilePage({ params }: PageProps<'/custom
                 <p className="font-medium text-gray-900">{typedCustomer.program?.company_name || typedCustomer.employer || '-'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Program Type</p>
+                <p className="text-sm text-gray-500">Company Type</p>
                 <p className="font-medium text-gray-900">{getProgramTypeLabel(typedCustomer.program)}</p>
               </div>
             </div>
@@ -224,7 +229,7 @@ export default async function CustomerProfilePage({ params }: PageProps<'/custom
             <h3 className="mb-3 text-sm font-semibold text-gray-500">Profile</h3>
             <div className="space-y-3 text-sm">
               <div>
-                <p className="text-gray-500">Program</p>
+                <p className="text-gray-500">Company</p>
                 <p className="font-medium text-gray-900">{typedCustomer.program?.company_name || 'Unassigned'}</p>
               </div>
               <div>
@@ -262,6 +267,18 @@ export default async function CustomerProfilePage({ params }: PageProps<'/custom
               </div>
             </div>
           )}
+
+          <CustomerProfileManager
+            id={typedCustomer.id}
+            first_name={typedCustomer.first_name}
+            last_name={typedCustomer.last_name}
+            email={typedCustomer.email}
+            phone={typedCustomer.phone}
+            date_of_birth={typedCustomer.date_of_birth}
+            employer={typedCustomer.employer}
+            notes={typedCustomer.notes}
+            address={typedCustomer.address}
+          />
         </div>
       </div>
     </div>

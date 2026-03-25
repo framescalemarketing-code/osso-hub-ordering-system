@@ -131,7 +131,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
           {typedOrder.program && (
             <div className="rounded-xl border border-gray-200 bg-white p-6">
-              <h3 className="mb-3 text-sm font-semibold text-gray-500">Program</h3>
+              <h3 className="mb-3 text-sm font-semibold text-gray-500">Company</h3>
               <p className="font-medium">{typedOrder.program.company_name}</p>
               {typedOrder.program.invoice_terms && (
                 <p className="text-sm text-gray-500">Terms: {typedOrder.program.invoice_terms}</p>

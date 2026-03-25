@@ -1,5 +1,6 @@
 import { getCurrentEmployee } from '@/lib/auth';
 import { integrations } from '@/lib/integrations/config';
+import Link from 'next/link';
 
 export default async function SettingsPage() {
   const employee = await getCurrentEmployee();
@@ -36,6 +37,27 @@ export default async function SettingsPage() {
         <p className="text-xs text-gray-400 mt-4">
           Add API keys to your .env.local file to enable integrations. See .env.example for all available keys.
         </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2">
+        <Link
+          href="/settings/programs"
+          className="rounded-xl border border-gray-200 bg-white p-6 transition hover:border-blue-300 hover:bg-blue-50"
+        >
+          <h2 className="text-lg font-semibold text-gray-900">Programs</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Manage program templates, guideline defaults, and company package configuration support.
+          </p>
+        </Link>
+        <Link
+          href="/settings/pricing"
+          className="rounded-xl border border-gray-200 bg-white p-6 transition hover:border-blue-300 hover:bg-blue-50"
+        >
+          <h2 className="text-lg font-semibold text-gray-900">Pricing</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Review EU package pricing, service tiers, add-ons, travel, and discount policies.
+          </p>
+        </Link>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl p-6">

@@ -6,26 +6,32 @@ import type { Program } from '@/lib/types';
 
 type ProgramListItem = Pick<
   Program,
-  'id' | 'company_name' | 'contact_name' | 'contact_email' | 'approval_required' | 'invoice_terms' | 'is_active'
+  | 'id'
+  | 'company_name'
+  | 'contact_name'
+  | 'contact_email'
+  | 'approval_required'
+  | 'invoice_terms'
+  | 'is_active'
+  | 'program_type'
+  | 'employee_count'
+  | 'eu_package'
+  | 'service_tier'
 >;
 
 type ActiveEnrollmentRow = {
   program_id: string;
 };
 
-function getProgramTypeLabel(program?: { approval_required: boolean; program_type?: string | null } | null) {
-  if (!program) return 'Unassigned';
-  return program.program_type?.trim() || (program.approval_required ? 'Approval Required' : 'Direct');
-}
-
-export default async function ProgramsPage() {
+export default async function CompaniesPage() {
   const supabase = await createServerSupabaseClient();
   const employee = await getCurrentEmployee();
 
   const [programsRes, enrollmentsRes] = await Promise.all([
     supabase
       .from('programs')
-      .select('id, company_name, contact_name, contact_email, approval_required, invoice_terms, is_active')
+      .select('id, company_name, contact_name, contact_email, approval_required, invoice_terms, is_active, program_type, employee_count, eu_package, service_tier')
+      .eq('is_active', true)
       .order('company_name'),
     supabase
       .from('program_enrollments')
@@ -46,7 +52,7 @@ export default async function ProgramsPage() {
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Programs</h1>
+          <h1 className="text-2xl font-bold">Companies</h1>
           <p className="mt-1 text-sm text-gray-500">
             Click a company to open its profile, address, and member details.
           </p>
@@ -56,11 +62,12 @@ export default async function ProgramsPage() {
       {canManage && <ProgramForm />}
 
       <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
-        <div className="hidden xl:grid xl:grid-cols-[1.5fr_1fr_1fr_1fr_1fr] gap-4 border-b border-gray-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <div className="hidden xl:grid xl:grid-cols-[1.3fr_1fr_1fr_0.9fr_0.9fr_1fr] gap-4 border-b border-gray-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
           <span>Company</span>
           <span>POC Name</span>
           <span>POC Email</span>
-          <span>Program Type</span>
+          <span>EU Package</span>
+          <span>Service Tier</span>
           <span>Employee Count</span>
         </div>
 
@@ -74,11 +81,11 @@ export default async function ProgramsPage() {
                 href={`/programs/${program.id}`}
                 className="block border-b border-gray-100 px-4 py-4 transition hover:bg-gray-50"
               >
-                <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
+                <div className="grid gap-4 xl:grid-cols-[1.3fr_1fr_1fr_0.9fr_0.9fr_1fr]">
                   <div className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">Company</p>
                     <p className="font-medium text-gray-900">{program.company_name}</p>
-                    <p className="text-xs text-gray-500">{program.is_active ? 'Active program' : 'Inactive program'}</p>
+                    <p className="text-xs text-gray-500">{program.is_active ? 'Active company program' : 'Inactive company program'}</p>
                   </div>
 
                   <div className="space-y-1">
@@ -92,13 +99,20 @@ export default async function ProgramsPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">Program Type</p>
-                    <p className="text-gray-600">{getProgramTypeLabel(program)}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">EU Package</p>
+                    <p className="text-gray-600">{program.eu_package || '-'}</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">Service Tier</p>
+                    <p className="text-gray-600">{program.service_tier || '-'}</p>
                   </div>
 
                   <div className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">Employee Count</p>
-                    <p className="text-gray-600">{activeCount} active member{activeCount === 1 ? '' : 's'}</p>
+                    <p className="text-gray-600">
+                      {program.employee_count ?? activeCount} active member{(program.employee_count ?? activeCount) === 1 ? '' : 's'}
+                    </p>
                   </div>
                 </div>
               </Link>
@@ -107,7 +121,7 @@ export default async function ProgramsPage() {
         </div>
 
         {(!programs || programs.length === 0) && (
-          <div className="px-4 py-12 text-center text-gray-400">No programs yet</div>
+          <div className="px-4 py-12 text-center text-gray-400">No companies yet</div>
         )}
       </div>
     </div>
