@@ -23,7 +23,7 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
     od_sphere: '', od_cylinder: '', od_axis: '', od_add: '', od_prism: '', od_prism_base: '',
     os_sphere: '', os_cylinder: '', os_axis: '', os_add: '', os_prism: '', os_prism_base: '',
     pd_distance: '', pd_near: '', pd_right: '', pd_left: '',
-    prescriber_name: '', prescriber_npi: '', rx_date: '', expiration_date: '',
+    rx_date: '', expiration_date: '',
     notes: '',
   });
 
@@ -47,6 +47,11 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
   }
 
   async function handleSave() {
+    if (!rx.expiration_date) {
+      alert('Expiration date is required before saving the prescription.');
+      return;
+    }
+
     setSaving(true);
     const res = await fetch('/api/prescriptions', {
       method: 'POST',
@@ -71,8 +76,8 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
         pd_near: rx.pd_near || null,
         pd_right: rx.pd_right || null,
         pd_left: rx.pd_left || null,
-        prescriber_name: rx.prescriber_name || null,
-        prescriber_npi: rx.prescriber_npi || null,
+        prescriber_name: null,
+        prescriber_npi: null,
         rx_date: rx.rx_date || null,
         expiration_date: rx.expiration_date || null,
         pdf_storage_path: pdfPath,
@@ -118,7 +123,7 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
           disabled={uploading}
           className="px-4 py-2 bg-white border border-gray-300 border-dashed rounded-lg text-sm text-gray-500 hover:text-gray-800 transition"
         >
-          {uploading ? 'Uploading...' : pdfPath ? '✓ PDF Uploaded' : 'Click to upload prescription PDF or image'}
+          {uploading ? 'Uploading...' : pdfPath ? 'PDF uploaded' : 'Click to upload prescription PDF or image'}
         </button>
       </div>
 
@@ -153,13 +158,14 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
         <div><label className={labelClass}>Left PD</label><input type="number" step="0.5" value={rx.pd_left} onChange={e => update('pd_left', e.target.value)} className={inputClass} /></div>
       </div>
 
-      {/* Doctor Info */}
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">Prescriber Info</h3>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
-        <div><label className={labelClass}>Doctor Name</label><input type="text" value={rx.prescriber_name} onChange={e => update('prescriber_name', e.target.value)} className={inputClass} /></div>
-        <div><label className={labelClass}>NPI</label><input type="text" value={rx.prescriber_npi} onChange={e => update('prescriber_npi', e.target.value)} className={inputClass} /></div>
+      {/* Prescription Date Info */}
+      <h3 className="text-sm font-semibold text-gray-700 mb-3">Prescription Dates</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
         <div><label className={labelClass}>Rx Date</label><input type="date" value={rx.rx_date} onChange={e => update('rx_date', e.target.value)} className={inputClass} /></div>
-        <div><label className={labelClass}>Expiration</label><input type="date" value={rx.expiration_date} onChange={e => update('expiration_date', e.target.value)} className={inputClass} /></div>
+        <div>
+          <label className={labelClass}>Expiration *</label>
+          <input type="date" value={rx.expiration_date} onChange={e => update('expiration_date', e.target.value)} className={inputClass} required />
+        </div>
       </div>
 
       <div className="mb-6">

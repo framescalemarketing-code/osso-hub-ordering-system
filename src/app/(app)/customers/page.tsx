@@ -6,7 +6,7 @@ type CustomerListItem = Pick<
   Customer,
   'id' | 'first_name' | 'last_name' | 'email' | 'phone' | 'date_of_birth' | 'created_at' | 'notes'
 > & {
-  program?: Pick<Program, 'id' | 'company_name' | 'approval_required' | 'invoice_terms'> | null;
+  program?: Pick<Program, 'id' | 'company_name' | 'approval_required' | 'invoice_terms' | 'program_type'> | null;
 };
 
 type RecentOrderRow = Pick<Order, 'customer_id' | 'created_at'>;
@@ -20,13 +20,18 @@ function getProgramTypeLabel(program?: { approval_required: boolean; program_typ
   return program.program_type?.trim() || (program.approval_required ? 'Approval Required' : 'Direct');
 }
 
+function getProgramLabel(program?: { id: string } | null) {
+  return program?.id ? 'Company Program' : 'Retail';
+}
+
 export default async function CustomersPage() {
   const supabase = await createServerSupabaseClient();
 
   const [customersRes, ordersRes] = await Promise.all([
     supabase
       .from('customers')
-      .select('id, first_name, last_name, email, phone, date_of_birth, created_at, notes, program:programs(id, company_name, approval_required, invoice_terms)')
+      .select('id, first_name, last_name, email, phone, date_of_birth, created_at, notes, program:programs(id, company_name, approval_required, invoice_terms, program_type)')
+      .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(100),
     supabase
@@ -101,7 +106,7 @@ export default async function CustomersPage() {
 
                   <div className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">Program</p>
-                    <p className="font-medium text-gray-900">{program?.company_name || 'Unassigned'}</p>
+                    <p className="font-medium text-gray-900">{getProgramLabel(program)}</p>
                   </div>
 
                   <div className="space-y-1">

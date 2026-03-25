@@ -2,6 +2,13 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { Address, Customer, Order, Program } from '@/lib/types';
+import CompanyProfileManager from '@/components/CompanyProfileManager';
+import {
+  calculateEuPackagePerEmployee,
+  calculateServiceTierPerEmployee,
+  safeParsePriceAdjustments,
+  type EUPackageAddOnKey,
+} from '@/lib/pricing';
 
 type ProgramDetail = Program & {
   orders?: Array<
@@ -44,7 +51,11 @@ function getProgramTypeLabel(program?: { approval_required: boolean; program_typ
   return program.program_type?.trim() || (program.approval_required ? 'Approval Required' : 'Direct');
 }
 
-export default async function ProgramDetailPage({ params }: PageProps<'/programs/[id]'>) {
+type CompanyDetailPageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function ProgramDetailPage({ params }: CompanyDetailPageProps) {
   const { id } = await params;
   const supabase = await createServerSupabaseClient();
 
@@ -65,12 +76,22 @@ export default async function ProgramDetailPage({ params }: PageProps<'/programs
   );
   const activeMembers = (typedProgram.members || []).filter((member) => member.status === 'active');
   const primaryAddress = typedProgram.billing_address || typedProgram.shipping_address;
+  const parsedEuAdjustments = safeParsePriceAdjustments(typedProgram.eu_package_custom_adjustments);
+  const parsedServiceAdjustments = safeParsePriceAdjustments(typedProgram.service_tier_custom_adjustments);
+  const euPerEmployee = typedProgram.eu_package
+    ? calculateEuPackagePerEmployee(typedProgram.eu_package, (typedProgram.eu_package_add_ons || []) as EUPackageAddOnKey[], parsedEuAdjustments)
+    : null;
+  const servicePerEmployee = typedProgram.service_tier
+    ? calculateServiceTierPerEmployee(typedProgram.service_tier, parsedServiceAdjustments)
+    : null;
+  const totalPerEmployee =
+    euPerEmployee !== null && servicePerEmployee !== null ? euPerEmployee + servicePerEmployee : null;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3">
         <Link href="/programs" className="text-sm text-gray-500 hover:text-gray-800">
-          {'<- Programs'}
+          {'<- Companies'}
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -202,22 +223,33 @@ export default async function ProgramDetailPage({ params }: PageProps<'/programs
           <div className="rounded-xl border border-gray-200 bg-white p-6">
             <h3 className="mb-3 text-sm font-semibold text-gray-500">Restricted Guidelines</h3>
             <p className="whitespace-pre-line text-sm text-gray-700">
-              {typedProgram.notes || 'No restricted guidelines recorded yet.'}
+              {typedProgram.restricted_guidelines || typedProgram.notes || 'No restricted guidelines recorded yet.'}
             </p>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-6">
+            <h3 className="mb-3 text-sm font-semibold text-gray-500">EU Package + Service Pricing</h3>
+            <div className="space-y-2 text-sm text-gray-700">
+              <p>EU Package: <span className="font-medium">{typedProgram.eu_package || '-'}</span></p>
+              <p>Service Tier: <span className="font-medium">{typedProgram.service_tier || '-'}</span></p>
+              <p>EU allowance per employee: <span className="font-medium">{euPerEmployee !== null ? `$${euPerEmployee.toFixed(2)}` : '-'}</span></p>
+              <p>Service fee per employee: <span className="font-medium">{servicePerEmployee !== null ? `$${servicePerEmployee.toFixed(2)}` : '-'}</span></p>
+              <p>Total per employee: <span className="font-medium">{totalPerEmployee !== null ? `$${totalPerEmployee.toFixed(2)}` : '-'}</span></p>
+            </div>
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white p-6">
             <h3 className="mb-3 text-sm font-semibold text-gray-500">Loyalty / Referral Credits</h3>
             <p className="text-2xl font-bold text-gray-900">
-              {typeof typedProgram.credit_count === 'number' ? typedProgram.credit_count : 'Not tracked'}
+              {(Number(typedProgram.loyalty_credit_count || 0) + Number(typedProgram.referral_credit_count || 0)).toString()}
             </p>
             <p className="mt-1 text-sm text-gray-500">
-              No credit ledger column exists yet, so this safely falls back until the schema is extended.
+              Loyalty: {typedProgram.loyalty_credit_count || 0} / Referral: {typedProgram.referral_credit_count || 0}
             </p>
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white p-6">
-            <h3 className="mb-3 text-sm font-semibold text-gray-500">Program Details</h3>
+            <h3 className="mb-3 text-sm font-semibold text-gray-500">Company Details</h3>
             <div className="space-y-3 text-sm">
               <div>
                 <p className="text-gray-500">Program Type</p>
@@ -233,6 +265,27 @@ export default async function ProgramDetailPage({ params }: PageProps<'/programs
               </div>
             </div>
           </div>
+
+          <CompanyProfileManager
+            id={typedProgram.id}
+            company_name={typedProgram.company_name}
+            contact_name={typedProgram.contact_name}
+            contact_email={typedProgram.contact_email}
+            contact_phone={typedProgram.contact_phone}
+            invoice_terms={typedProgram.invoice_terms}
+            approval_required={typedProgram.approval_required}
+            approver_emails={typedProgram.approver_emails || []}
+            program_type={typedProgram.program_type || null}
+            employee_count={typedProgram.employee_count || activeMembers.length}
+            restricted_guidelines={typedProgram.restricted_guidelines || typedProgram.notes}
+            loyalty_credit_count={typedProgram.loyalty_credit_count || 0}
+            referral_credit_count={typedProgram.referral_credit_count || 0}
+            eu_package={typedProgram.eu_package || null}
+            eu_package_add_ons={(typedProgram.eu_package_add_ons || []) as EUPackageAddOnKey[]}
+            eu_package_custom_adjustments={parsedEuAdjustments}
+            service_tier={typedProgram.service_tier || null}
+            service_tier_custom_adjustments={parsedServiceAdjustments}
+          />
         </div>
       </div>
     </div>

@@ -1,4 +1,6 @@
-// Supabase Database types — mirrors the SQL schema
+﻿import type { EUPackage, EUPackageAddOnKey, PriceAdjustment, ServiceTier } from '@/lib/pricing';
+
+// Supabase database types - mirrors the SQL schema
 export type EmployeeRole = 'admin' | 'manager' | 'sales' | 'optician' | 'readonly';
 export type OrderType = 'regular' | 'program';
 export type OrderStatus = 'draft' | 'pending_approval' | 'approved' | 'processing' | 'lens_ordered' | 'completed' | 'cancelled';
@@ -41,6 +43,11 @@ export interface Program {
   restricted_guidelines?: string | null;
   loyalty_credit_count?: number;
   referral_credit_count?: number;
+  eu_package?: EUPackage | null;
+  eu_package_add_ons?: EUPackageAddOnKey[];
+  eu_package_custom_adjustments?: PriceAdjustment[];
+  service_tier?: ServiceTier | null;
+  service_tier_custom_adjustments?: PriceAdjustment[];
   billing_address: Address | null;
   shipping_address: Address | null;
   approval_required: boolean;
@@ -238,7 +245,7 @@ export interface IntegrationJob {
   updated_at: string;
 }
 
-// ─── Enrollment (migration 006) ────────────────────────────────────────────
+// Enrollment (migration 006)
 
 export type EnrollmentImportStatus = 'received' | 'validated' | 'applied' | 'failed';
 export type EnrollmentSource = 'csv' | 'manual' | 'self_register';
@@ -287,7 +294,7 @@ export interface ProgramEnrollment {
   terminated_by: string | null;
   /**
    * Optional link to an existing customers row.
-   * FK goes enrollment → customer, never the reverse.
+   * FK goes enrollment -> customer, never the reverse.
    * Retail customers are never required to appear in this table.
    */
   customer_id: string | null;
@@ -366,3 +373,4 @@ export interface CreatePrescriptionInput {
   pdf_storage_path?: string | null;
   notes?: string | null;
 }
+

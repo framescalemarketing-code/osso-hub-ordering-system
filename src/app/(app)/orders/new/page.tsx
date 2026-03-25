@@ -20,6 +20,7 @@ export default function NewOrderPage() {
   const [items, setItems] = useState<Partial<OrderItem>[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+  const [discount, setDiscount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -44,6 +45,7 @@ export default function NewOrderPage() {
           program_id: selectedProgramId,
           prescription_id: prescription?.id,
           items,
+          discount,
           shipping_address: customer.address,
         }),
       });
@@ -62,8 +64,10 @@ export default function NewOrderPage() {
   }
 
   const subtotal = items.reduce((sum, i) => sum + (Number(i.line_total) || 0), 0);
-  const tax = subtotal * 0.0875; // CA sales tax
-  const total = subtotal + tax;
+  const effectiveDiscount = Math.min(Math.max(discount, 0), subtotal);
+  const taxableSubtotal = Math.max(subtotal - effectiveDiscount, 0);
+  const tax = taxableSubtotal * 0.0875;
+  const total = taxableSubtotal + tax;
 
   return (
     <div>
@@ -85,20 +89,20 @@ export default function NewOrderPage() {
             orderType === 'program' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
-          Program Employee
+          Company Employee
         </button>
       </div>
 
-      {/* Program Selector */}
+      {/* Company Selector */}
       {orderType === 'program' && (
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
           <select
             value={selectedProgramId || ''}
             onChange={e => setSelectedProgramId(e.target.value || null)}
             className="w-full max-w-md px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900"
           >
-            <option value="">Select a program...</option>
+            <option value="">Select a company...</option>
             {programs.map(p => (
               <option key={p.id} value={p.id}>{p.company_name}</option>
             ))}
@@ -179,11 +183,25 @@ export default function NewOrderPage() {
               )}
               {selectedProgramId && (
                 <div>
-                  <p className="text-sm text-gray-500">Program</p>
+                  <p className="text-sm text-gray-500">Company</p>
                   <p className="font-medium">{programs.find(p => p.id === selectedProgramId)?.company_name}</p>
                 </div>
               )}
             </div>
+
+            {orderType === 'regular' && (
+              <div className="mb-4 max-w-xs">
+                <label className="mb-1 block text-sm font-medium text-gray-700">Discount</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={discount}
+                  onChange={(e) => setDiscount(Math.max(Number(e.target.value) || 0, 0))}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900"
+                />
+              </div>
+            )}
 
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] text-sm mb-4">
@@ -208,6 +226,9 @@ export default function NewOrderPage() {
 
             <div className="text-right space-y-1 text-sm">
               <p>Subtotal: <span className="font-medium">${subtotal.toFixed(2)}</span></p>
+              {effectiveDiscount > 0 && (
+                <p>Discount: <span className="font-medium">-${effectiveDiscount.toFixed(2)}</span></p>
+              )}
               <p>Tax (8.75%): <span className="font-medium">${tax.toFixed(2)}</span></p>
               <p className="text-lg font-bold mt-2">Total: ${total.toFixed(2)}</p>
             </div>
