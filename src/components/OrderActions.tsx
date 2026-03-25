@@ -40,31 +40,31 @@ export default function OrderActions({ order, employeeRole }: { order: OrderActi
     <div className="flex gap-2 flex-wrap">
       {canManage && order.status === 'approved' && (
         <button onClick={() => updateStatus('processing')} disabled={!!loading}
-          className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition disabled:opacity-50">
+          className="pos-btn-primary px-3 py-2 disabled:opacity-50">
           {loading === 'processing' ? '...' : 'Start Processing'}
         </button>
       )}
       {canManage && order.status === 'processing' && (
         <button onClick={orderLenses} disabled={!!loading}
-          className="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition disabled:opacity-50">
+          className="rounded-xl bg-[#0f766e] px-3 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-50">
           {loading === 'lenses' ? '...' : 'Order Lenses'}
         </button>
       )}
       {canManage && ['processing', 'lens_ordered'].includes(order.status) && (
         <button onClick={() => updateStatus('completed')} disabled={!!loading}
-          className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition disabled:opacity-50">
+          className="rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-50">
           {loading === 'completed' ? '...' : 'Mark Complete'}
         </button>
       )}
       {canManage && !order.invoice_sent_at && order.status !== 'draft' && order.status !== 'cancelled' && (
         <button onClick={sendInvoice} disabled={!!loading}
-          className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium text-white transition disabled:opacity-50">
+          className="pos-btn-secondary border-[#b99765] text-[#4f3a21] disabled:opacity-50">
           {loading === 'invoice' ? '...' : 'Send Invoice'}
         </button>
       )}
       {canManage && !['completed', 'cancelled'].includes(order.status) && (
         <button onClick={() => updateStatus('cancelled')} disabled={!!loading}
-          className="px-3 py-2 bg-red-50 hover:bg-red-100 rounded-lg text-sm font-medium text-red-600 transition disabled:opacity-50">
+          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50">
           Cancel
         </button>
       )}

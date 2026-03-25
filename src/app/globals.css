@@ -1,21 +1,37 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f9fafb;
-  --foreground: #1f2937;
+  --background: #f4f0e8;
+  --background-soft: #fcfaf6;
+  --foreground: #1c1b18;
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-strong: rgba(255, 255, 255, 0.94);
+  --surface-border: rgba(131, 112, 78, 0.24);
+  --brand: #8f6d3f;
+  --brand-deep: #6f522d;
+  --brand-ink: #2a1f12;
+  --accent: #0f766e;
+  --danger: #b42318;
+  --ring: rgba(143, 109, 63, 0.4);
+  --text-muted: #605849;
+  --shadow-soft: 0 16px 44px rgba(40, 30, 18, 0.1);
+  --shadow-lifted: 0 24px 56px rgba(40, 30, 18, 0.14);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(1200px 420px at 15% -10%, rgba(208, 179, 132, 0.34), transparent 70%),
+    radial-gradient(900px 360px at 88% -4%, rgba(143, 109, 63, 0.22), transparent 66%),
+    linear-gradient(170deg, var(--background-soft), var(--background));
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -23,4 +39,63 @@ body {
 html,
 body {
   width: 100%;
+}
+
+* {
+  scrollbar-color: rgba(111, 82, 45, 0.45) transparent;
+}
+
+@layer components {
+  .pos-panel {
+    @apply rounded-2xl border backdrop-blur-sm;
+    background: var(--surface);
+    border-color: var(--surface-border);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .pos-panel-strong {
+    @apply rounded-2xl border;
+    background: var(--surface-strong);
+    border-color: var(--surface-border);
+    box-shadow: var(--shadow-lifted);
+  }
+
+  .pos-input {
+    @apply w-full rounded-xl border bg-white/95 px-3 py-2.5 text-sm text-[#2a251d] transition outline-none;
+    border-color: rgba(143, 109, 63, 0.3);
+  }
+
+  .pos-input:focus {
+    border-color: rgba(143, 109, 63, 0.55);
+    box-shadow: 0 0 0 3px var(--ring);
+  }
+
+  .pos-label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide;
+    color: var(--text-muted);
+  }
+
+  .pos-btn-primary {
+    @apply rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition;
+    background: linear-gradient(135deg, var(--brand), var(--brand-deep));
+  }
+
+  .pos-btn-primary:hover {
+    filter: brightness(1.05);
+  }
+
+  .pos-btn-secondary {
+    @apply rounded-xl border px-4 py-2.5 text-sm font-semibold transition;
+    border-color: rgba(143, 109, 63, 0.35);
+    color: #3b3124;
+    background: rgba(255, 255, 255, 0.84);
+  }
+
+  .pos-btn-secondary:hover {
+    background: rgba(255, 255, 255, 1);
+  }
+
+  .pos-badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize;
+  }
 }

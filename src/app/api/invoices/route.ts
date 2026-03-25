@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceClient } from '@/lib/supabase/server';
 import { integrations } from '@/lib/integrations/config';
 import type { Customer, Order, OrderItem, Program } from '@/lib/types';
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     await resend.emails.send({
       from: integrations.resend.from(),
       to: recipientEmail,
-      subject: `Invoice ${invoiceNumber} — OSSO Order ${order.order_number}`,
+      subject: `Invoice ${invoiceNumber} - OSSO Order ${order.order_number}`,
       html: invoiceHtml,
     });
   }
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 function buildInvoiceHtml(order: InvoiceOrder, invoiceNumber: string): string {
   const items = (order.items || []).map(item => `
     <tr>
-      <td style="padding:8px;border-bottom:1px solid #eee">${item.frame_brand || ''} ${item.frame_model || ''} — ${(item.glasses_type || '').replace(/_/g, ' ')}</td>
+      <td style="padding:8px;border-bottom:1px solid #eee">${item.frame_brand || ''} ${item.frame_model || ''} - ${(item.glasses_type || '').replace(/_/g, ' ')}</td>
       <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${item.quantity}</td>
       <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${Number(item.line_total).toFixed(2)}</td>
     </tr>
@@ -82,7 +82,7 @@ function buildInvoiceHtml(order: InvoiceOrder, invoiceNumber: string): string {
       <p><strong>Order:</strong> ${order.order_number}</p>
       <p><strong>Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</p>
       <p><strong>Customer:</strong> ${order.customer?.first_name} ${order.customer?.last_name}</p>
-      ${order.program ? `<p><strong>Program:</strong> ${order.program.company_name}</p>` : ''}
+      ${order.program ? `<p><strong>Company:</strong> ${order.program.company_name}</p>` : ''}
       <table style="width:100%;border-collapse:collapse;margin:20px 0">
         <thead>
           <tr style="background:#f5f5f5">
@@ -101,7 +101,8 @@ function buildInvoiceHtml(order: InvoiceOrder, invoiceNumber: string): string {
       </div>
       ${order.program?.invoice_terms ? `<p style="margin-top:20px;color:#666">Terms: ${order.program.invoice_terms}</p>` : ''}
       <hr style="margin:24px 0;border:none;border-top:1px solid #eee">
-      <p style="color:#999;font-size:12px">OSSO Hub — On-Sight Safety Optics</p>
+      <p style="color:#999;font-size:12px">OSSO Hub - On-Sight Safety Optics</p>
     </div>
   `;
 }
+

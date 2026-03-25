@@ -64,6 +64,8 @@ const CUSTOMER_SCHEMA: BigQueryField[] = [
   { name: 'program_invoice_terms', type: 'STRING' },
   { name: 'program_approval_required', type: 'BOOLEAN' },
   { name: 'program_is_active', type: 'BOOLEAN' },
+  { name: 'program_eu_package', type: 'STRING' },
+  { name: 'program_service_tier', type: 'STRING' },
   { name: 'source_customer_updated_at', type: 'TIMESTAMP' },
   { name: 'source_order_id', type: 'STRING' },
   { name: 'synced_at', type: 'TIMESTAMP' },
@@ -92,6 +94,11 @@ const PROGRAM_SCHEMA: BigQueryField[] = [
   { name: 'shipping_state', type: 'STRING' },
   { name: 'shipping_zip', type: 'STRING' },
   { name: 'invoice_terms', type: 'STRING' },
+  { name: 'eu_package', type: 'STRING' },
+  { name: 'eu_package_add_ons', type: 'STRING', mode: 'REPEATED' },
+  { name: 'eu_package_custom_adjustments_json', type: 'STRING' },
+  { name: 'service_tier', type: 'STRING' },
+  { name: 'service_tier_custom_adjustments_json', type: 'STRING' },
   { name: 'restricted_guidelines', type: 'STRING' },
   { name: 'loyalty_credit_count', type: 'INTEGER' },
   { name: 'referral_credit_count', type: 'INTEGER' },
@@ -125,6 +132,8 @@ const ORDER_SCHEMA: BigQueryField[] = [
   { name: 'customer_program_type', type: 'STRING' },
   { name: 'customer_program_contact_name', type: 'STRING' },
   { name: 'customer_program_contact_email', type: 'STRING' },
+  { name: 'customer_program_eu_package', type: 'STRING' },
+  { name: 'customer_program_service_tier', type: 'STRING' },
   { name: 'program_id', type: 'STRING' },
   { name: 'program_name', type: 'STRING' },
   { name: 'program_type', type: 'STRING' },
@@ -133,6 +142,11 @@ const ORDER_SCHEMA: BigQueryField[] = [
   { name: 'program_invoice_terms', type: 'STRING' },
   { name: 'program_approval_required', type: 'BOOLEAN' },
   { name: 'program_is_active', type: 'BOOLEAN' },
+  { name: 'program_eu_package', type: 'STRING' },
+  { name: 'program_eu_package_add_ons', type: 'STRING', mode: 'REPEATED' },
+  { name: 'program_eu_package_custom_adjustments_json', type: 'STRING' },
+  { name: 'program_service_tier', type: 'STRING' },
+  { name: 'program_service_tier_custom_adjustments_json', type: 'STRING' },
   { name: 'program_employee_count', type: 'INTEGER' },
   { name: 'program_restricted_guidelines', type: 'STRING' },
   { name: 'program_loyalty_credit_count', type: 'INTEGER' },
@@ -164,6 +178,8 @@ const ORDER_ITEM_SCHEMA: BigQueryField[] = [
   { name: 'customer_name', type: 'STRING' },
   { name: 'program_id', type: 'STRING' },
   { name: 'program_name', type: 'STRING' },
+  { name: 'program_eu_package', type: 'STRING' },
+  { name: 'program_service_tier', type: 'STRING' },
   { name: 'glasses_type', type: 'STRING' },
   { name: 'frame_brand', type: 'STRING' },
   { name: 'frame_model', type: 'STRING' },
@@ -369,6 +385,8 @@ function buildCustomerRow(
     program_invoice_terms: customer.program?.invoice_terms ?? program?.invoice_terms ?? null,
     program_approval_required: customer.program?.approval_required ?? program?.approval_required ?? null,
     program_is_active: customer.program?.is_active ?? program?.is_active ?? null,
+    program_eu_package: customer.program?.eu_package ?? program?.eu_package ?? null,
+    program_service_tier: customer.program?.service_tier ?? program?.service_tier ?? null,
     source_customer_updated_at: customer.updated_at,
     source_order_id: order.id,
     synced_at: syncedAt,
@@ -399,6 +417,11 @@ function buildProgramRow(order: BigQueryOrderContext, program: ExtendedProgram, 
     shipping_state: program.shipping_address?.state ?? null,
     shipping_zip: program.shipping_address?.zip ?? null,
     invoice_terms: program.invoice_terms,
+    eu_package: program.eu_package ?? null,
+    eu_package_add_ons: program.eu_package_add_ons || [],
+    eu_package_custom_adjustments_json: toJsonString(program.eu_package_custom_adjustments),
+    service_tier: program.service_tier ?? null,
+    service_tier_custom_adjustments_json: toJsonString(program.service_tier_custom_adjustments),
     restricted_guidelines: program.restricted_guidelines ?? program.notes ?? null,
     loyalty_credit_count: program.loyalty_credit_count ?? null,
     referral_credit_count: program.referral_credit_count ?? null,
@@ -437,6 +460,8 @@ function buildOrderRow(order: BigQueryOrderContext, program: ExtendedProgram | n
     customer_program_type: getProgramType(customerProgram),
     customer_program_contact_name: customerProgram?.contact_name ?? null,
     customer_program_contact_email: customerProgram?.contact_email ?? null,
+    customer_program_eu_package: customerProgram?.eu_package ?? null,
+    customer_program_service_tier: customerProgram?.service_tier ?? null,
     program_id: effectiveProgram?.id ?? order.program_id ?? null,
     program_name: effectiveProgram?.company_name ?? null,
     program_type: getProgramType(effectiveProgram),
@@ -445,6 +470,11 @@ function buildOrderRow(order: BigQueryOrderContext, program: ExtendedProgram | n
     program_invoice_terms: effectiveProgram?.invoice_terms ?? null,
     program_approval_required: effectiveProgram?.approval_required ?? null,
     program_is_active: effectiveProgram?.is_active ?? null,
+    program_eu_package: effectiveProgram?.eu_package ?? null,
+    program_eu_package_add_ons: effectiveProgram?.eu_package_add_ons || [],
+    program_eu_package_custom_adjustments_json: toJsonString(effectiveProgram?.eu_package_custom_adjustments),
+    program_service_tier: effectiveProgram?.service_tier ?? null,
+    program_service_tier_custom_adjustments_json: toJsonString(effectiveProgram?.service_tier_custom_adjustments),
     program_employee_count: effectiveProgram?.employee_count ?? null,
     program_restricted_guidelines: effectiveProgram?.restricted_guidelines ?? effectiveProgram?.notes ?? null,
     program_loyalty_credit_count: effectiveProgram?.loyalty_credit_count ?? null,
@@ -483,6 +513,8 @@ function buildOrderItemRow(
     customer_name: `${order.customer.first_name} ${order.customer.last_name}`.trim(),
     program_id: effectiveProgram?.id ?? order.program_id ?? null,
     program_name: effectiveProgram?.company_name ?? null,
+    program_eu_package: effectiveProgram?.eu_package ?? null,
+    program_service_tier: effectiveProgram?.service_tier ?? null,
     glasses_type: item.glasses_type,
     frame_brand: item.frame_brand,
     frame_model: item.frame_model,
@@ -507,6 +539,15 @@ function buildInsertRow(row: BigQueryRow, insertId: string) {
     insertId,
     json: row,
   };
+}
+
+function toJsonString(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return null;
+  }
 }
 
 function getProgramType(program?: ExtendedProgram | null): string | null {

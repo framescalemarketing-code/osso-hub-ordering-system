@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { integrations } from '@/lib/integrations/config';
 
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     await resend.emails.send({
       from: integrations.resend.from(),
       to: approval.approver_email,
-      subject: `Approval Needed: Order ${order.order_number} — ${order.program?.company_name || 'Program Order'}`,
+      subject: `Approval Needed: Order ${order.order_number} - ${order.program?.company_name || 'Company Order'}`,
       html: `
         <h2>Order Approval Request</h2>
         <p>A new order requires your approval:</p>
@@ -54,3 +54,4 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ message: `Sent ${approvals.length} approval requests` });
 }
+
