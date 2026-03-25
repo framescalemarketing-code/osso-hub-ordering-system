@@ -76,7 +76,7 @@ export default async function ProgramDetailPage({ params }: PageProps<'/programs
           <div>
             <h1 className="text-2xl font-bold">{typedProgram.company_name}</h1>
             <p className="mt-1 text-sm text-gray-500">
-              {typedProgram.contact_name || 'No contact name'} · {typedProgram.contact_email || 'No contact email'}
+              {typedProgram.contact_name || 'No contact name'} - {typedProgram.contact_email || 'No contact email'}
             </p>
           </div>
           <div className="rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700">
@@ -238,3 +238,4 @@ export default async function ProgramDetailPage({ params }: PageProps<'/programs
     </div>
   );
 }
+
