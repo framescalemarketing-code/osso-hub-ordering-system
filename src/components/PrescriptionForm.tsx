@@ -96,21 +96,21 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
     onComplete(prescription);
   }
 
-  const inputClass = "w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent";
-  const labelClass = "block text-xs font-medium text-gray-600 mb-1";
+  const inputClass = 'pos-input';
+  const labelClass = 'pos-label';
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6">
+    <div className="pos-panel p-6">
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg font-semibold">Prescription</h2>
-        <button onClick={onSkip} className="text-sm text-gray-500 hover:text-gray-800">
+        <h2 className="text-lg font-bold text-[#2a1f12]">Prescription</h2>
+        <button onClick={onSkip} className="text-sm font-semibold text-[#7d6541] hover:text-[#48341f]">
           Skip (no Rx needed)
         </button>
       </div>
 
       {/* PDF Upload */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Upload Rx PDF</label>
+        <label className="pos-label">Upload Rx PDF</label>
         <input
           ref={fileRef}
           type="file"
@@ -121,14 +121,14 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
         <button
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="px-4 py-2 bg-white border border-gray-300 border-dashed rounded-lg text-sm text-gray-500 hover:text-gray-800 transition"
+          className="rounded-xl border border-dashed border-[#cbb089] bg-white/85 px-4 py-2 text-sm font-semibold text-[#6f5b40] transition hover:bg-white"
         >
           {uploading ? 'Uploading...' : pdfPath ? 'PDF uploaded' : 'Click to upload prescription PDF or image'}
         </button>
       </div>
 
       {/* Right Eye */}
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">OD (Right Eye)</h3>
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#7d6541]">OD (Right Eye)</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-5">
         <div><label className={labelClass}>Sphere</label><input type="number" step="0.25" value={rx.od_sphere} onChange={e => update('od_sphere', e.target.value)} className={inputClass} /></div>
         <div><label className={labelClass}>Cylinder</label><input type="number" step="0.25" value={rx.od_cylinder} onChange={e => update('od_cylinder', e.target.value)} className={inputClass} /></div>
@@ -139,7 +139,7 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
       </div>
 
       {/* Left Eye */}
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">OS (Left Eye)</h3>
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#7d6541]">OS (Left Eye)</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-5">
         <div><label className={labelClass}>Sphere</label><input type="number" step="0.25" value={rx.os_sphere} onChange={e => update('os_sphere', e.target.value)} className={inputClass} /></div>
         <div><label className={labelClass}>Cylinder</label><input type="number" step="0.25" value={rx.os_cylinder} onChange={e => update('os_cylinder', e.target.value)} className={inputClass} /></div>
@@ -150,7 +150,7 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
       </div>
 
       {/* PD */}
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">Pupillary Distance</h3>
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#7d6541]">Pupillary Distance</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <div><label className={labelClass}>Distance PD</label><input type="number" step="0.5" value={rx.pd_distance} onChange={e => update('pd_distance', e.target.value)} className={inputClass} /></div>
         <div><label className={labelClass}>Near PD</label><input type="number" step="0.5" value={rx.pd_near} onChange={e => update('pd_near', e.target.value)} className={inputClass} /></div>
@@ -159,7 +159,7 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
       </div>
 
       {/* Prescription Date Info */}
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">Prescription Dates</h3>
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#7d6541]">Prescription Dates</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
         <div><label className={labelClass}>Rx Date</label><input type="date" value={rx.rx_date} onChange={e => update('rx_date', e.target.value)} className={inputClass} /></div>
         <div>
@@ -176,7 +176,7 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
       <button
         onClick={handleSave}
         disabled={saving}
-        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition"
+        className="pos-btn-primary px-6 py-3 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {saving ? 'Saving...' : 'Save Prescription & Continue'}
       </button>

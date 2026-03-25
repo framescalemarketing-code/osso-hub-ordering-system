@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getCurrentEmployee } from '@/lib/auth';
 import type { Address, Customer, Order, Prescription, Program } from '@/lib/types';
 import CustomerProfileManager from '@/components/CustomerProfileManager';
 
@@ -49,6 +50,8 @@ type CustomerProfilePageProps = {
 export default async function CustomerProfilePage({ params }: CustomerProfilePageProps) {
   const { id } = await params;
   const supabase = await createServerSupabaseClient();
+  const employee = await getCurrentEmployee();
+  const canManage = ['admin', 'manager'].includes(employee?.role || '');
 
   const { data: customer } = await supabase
     .from('customers')
@@ -74,17 +77,17 @@ export default async function CustomerProfilePage({ params }: CustomerProfilePag
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3">
-        <Link href="/customers" className="text-sm text-gray-500 hover:text-gray-800">
+        <Link href="/customers" className="text-sm font-semibold text-[#7d6541] hover:text-[#48341f]">
           {'<- Customers'}
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-3xl font-extrabold tracking-tight text-[#2a1f12]">
               {typedCustomer.first_name} {typedCustomer.last_name}
             </h1>
-            <p className="mt-1 text-sm text-gray-500">{typedCustomer.email || 'No email on file'}</p>
+            <p className="mt-1 text-sm text-[#6f5b40]">{typedCustomer.email || 'No email on file'}</p>
           </div>
-          <div className="rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700">
+          <div className="rounded-full border border-[#ccb089] bg-[#fff8ec] px-3 py-1.5 text-sm font-semibold text-[#6f522d]">
             Recent order: {formatDate(recentOrderDate)}
           </div>
         </div>
@@ -92,7 +95,7 @@ export default async function CustomerProfilePage({ params }: CustomerProfilePag
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="pos-panel p-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <p className="text-sm text-gray-500">Phone</p>
@@ -113,7 +116,7 @@ export default async function CustomerProfilePage({ params }: CustomerProfilePag
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="pos-panel p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Recent Orders</h2>
               <p className="text-sm text-gray-500">{recentOrders.length} total</p>
@@ -159,7 +162,7 @@ export default async function CustomerProfilePage({ params }: CustomerProfilePag
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="pos-panel p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Latest Prescription</h2>
               <p className="text-sm text-gray-500">{latestPrescription ? formatDate(latestPrescription.created_at) : 'No prescription on file'}</p>
@@ -225,7 +228,7 @@ export default async function CustomerProfilePage({ params }: CustomerProfilePag
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="pos-panel p-6">
             <h3 className="mb-3 text-sm font-semibold text-gray-500">Profile</h3>
             <div className="space-y-3 text-sm">
               <div>
@@ -243,13 +246,13 @@ export default async function CustomerProfilePage({ params }: CustomerProfilePag
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="pos-panel p-6">
             <h3 className="mb-3 text-sm font-semibold text-gray-500">Address</h3>
             <p className="whitespace-pre-line text-sm text-gray-700">{formatAddress(typedCustomer.address)}</p>
           </div>
 
           {typedCustomer.program && (
-            <div className="rounded-xl border border-gray-200 bg-white p-6">
+            <div className="pos-panel p-6">
               <h3 className="mb-3 text-sm font-semibold text-gray-500">Company Details</h3>
               <div className="space-y-3 text-sm">
                 <div>
@@ -268,17 +271,19 @@ export default async function CustomerProfilePage({ params }: CustomerProfilePag
             </div>
           )}
 
-          <CustomerProfileManager
-            id={typedCustomer.id}
-            first_name={typedCustomer.first_name}
-            last_name={typedCustomer.last_name}
-            email={typedCustomer.email}
-            phone={typedCustomer.phone}
-            date_of_birth={typedCustomer.date_of_birth}
-            employer={typedCustomer.employer}
-            notes={typedCustomer.notes}
-            address={typedCustomer.address}
-          />
+          {canManage && (
+            <CustomerProfileManager
+              id={typedCustomer.id}
+              first_name={typedCustomer.first_name}
+              last_name={typedCustomer.last_name}
+              email={typedCustomer.email}
+              phone={typedCustomer.phone}
+              date_of_birth={typedCustomer.date_of_birth}
+              employer={typedCustomer.employer}
+              notes={typedCustomer.notes}
+              address={typedCustomer.address}
+            />
+          )}
         </div>
       </div>
     </div>

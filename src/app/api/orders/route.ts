@@ -19,7 +19,19 @@ export async function POST(request: NextRequest) {
   if (!employee) return NextResponse.json({ error: 'Employee not found' }, { status: 403 });
 
   const body = await request.json();
-  const { order_type, customer_id, program_id, prescription_id, items, shipping_address, discount } = body as {
+  const {
+    order_type,
+    customer_id,
+    program_id,
+    prescription_id,
+    items,
+    shipping_address,
+    discount,
+    requires_eligibility_review,
+    eligibility_reason,
+    intake_enrollment_id,
+    program_guidelines_snapshot,
+  } = body as {
     order_type: Order['order_type'];
     customer_id: string;
     program_id?: string | null;
@@ -27,6 +39,10 @@ export async function POST(request: NextRequest) {
     items: OrderInputItem[];
     shipping_address?: Order['shipping_address'];
     discount?: number;
+    requires_eligibility_review?: boolean;
+    eligibility_reason?: string | null;
+    intake_enrollment_id?: string | null;
+    program_guidelines_snapshot?: string | null;
   };
 
   if (!customer_id || !items?.length) {
@@ -44,11 +60,11 @@ export async function POST(request: NextRequest) {
   const total = taxableSubtotal + tax;
 
   let status = 'processing';
-  let program: { approval_required?: boolean; approver_emails?: string[] } | null = null;
+  let program: { approval_required?: boolean; approver_emails?: string[]; contact_email?: string | null } | null = null;
   if (order_type === 'program' && program_id) {
     const { data, error } = await supabase
       .from('programs')
-      .select('approval_required, approver_emails')
+      .select('approval_required, approver_emails, contact_email')
       .eq('id', program_id)
       .single();
     if (error) {
@@ -56,8 +72,20 @@ export async function POST(request: NextRequest) {
     }
 
     program = data;
-    if (program.approval_required) status = 'pending_approval';
+    if (program.approval_required || requires_eligibility_review) status = 'pending_approval';
   }
+
+  const approvalReason = requires_eligibility_review
+    ? `Eligibility review required${eligibility_reason ? `: ${eligibility_reason}` : ''}`
+    : null;
+
+  const internalNotes = [
+    approvalReason,
+    intake_enrollment_id ? `Enrollment reference: ${intake_enrollment_id}` : null,
+    program_guidelines_snapshot ? `Program guidelines snapshot: ${program_guidelines_snapshot}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
@@ -73,6 +101,8 @@ export async function POST(request: NextRequest) {
       discount: normalizedDiscount,
       total,
       shipping_address: shipping_address || null,
+      internal_notes: internalNotes || null,
+      customer_notes: approvalReason,
     })
     .select()
     .single();
@@ -113,11 +143,17 @@ export async function POST(request: NextRequest) {
   }
 
   if (status === 'pending_approval' && program_id) {
-    if (program?.approver_emails?.length) {
-      const approvals = program.approver_emails.map((email: string) => ({
+    const approverEmails = new Set<string>(program?.approver_emails || []);
+    if (requires_eligibility_review && program?.contact_email) {
+      approverEmails.add(program.contact_email);
+    }
+
+    if (approverEmails.size > 0) {
+      const approvals = Array.from(approverEmails).map((email: string) => ({
         order_id: order.id,
         approver_email: email,
         requested_by: employee.id,
+        notes: approvalReason,
       }));
       await supabase.from('approvals').insert(approvals);
     }
@@ -139,7 +175,11 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  if (status === 'pending_approval' && program_id && program?.approver_emails?.length) {
+  if (
+    status === 'pending_approval' &&
+    program_id &&
+    ((program?.approver_emails?.length || 0) > 0 || (requires_eligibility_review && !!program?.contact_email))
+  ) {
     await fetch(new URL('/api/approvals/send', request.url).toString(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
