@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import CustomerIntakeForm from '@/components/CustomerIntakeForm';
+import type { CustomerIntakeContext } from '@/components/CustomerIntakeForm';
 import PrescriptionForm from '@/components/PrescriptionForm';
 import GlassesOrderItems from '@/components/GlassesOrderItems';
 import type { Customer, Prescription, OrderItem, Program } from '@/lib/types';
@@ -23,6 +24,11 @@ export default function NewOrderPage() {
   const [discount, setDiscount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [intakeContext, setIntakeContext] = useState<CustomerIntakeContext>({
+    eligibility_status: 'unknown',
+    eligibility_reason: null,
+    enrollment_id: null,
+  });
 
   useEffect(() => {
     supabase.from('programs').select('*').eq('is_active', true).then(({ data }) => {
@@ -47,6 +53,11 @@ export default function NewOrderPage() {
           items,
           discount,
           shipping_address: customer.address,
+          requires_eligibility_review: shouldForceApproval,
+          eligibility_reason: intakeContext.eligibility_reason,
+          intake_enrollment_id: intakeContext.enrollment_id,
+          program_guidelines_snapshot:
+            orderType === 'program' ? (selectedProgram?.restricted_guidelines || null) : null,
         }),
       });
 
@@ -68,25 +79,31 @@ export default function NewOrderPage() {
   const taxableSubtotal = Math.max(subtotal - effectiveDiscount, 0);
   const tax = taxableSubtotal * 0.0875;
   const total = taxableSubtotal + tax;
+  const selectedProgram = programs.find((p) => p.id === selectedProgramId) || null;
+  const shouldForceApproval = orderType === 'program' && intakeContext.eligibility_status !== 'eligible';
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">New Order</h1>
+      <h1 className="mb-6 text-3xl font-extrabold tracking-tight text-[#2a1f12]">New Order</h1>
 
       {/* Order Type Toggle */}
       <div className="mb-6 flex flex-wrap gap-3">
         <button
           onClick={() => setOrderType('regular')}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-            orderType === 'regular' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+            orderType === 'regular'
+              ? 'bg-linear-to-r from-[#8f6d3f] to-[#725326] text-white shadow-[0_10px_20px_rgba(77,54,24,0.2)]'
+              : 'border border-[#ccb089] bg-white/85 text-[#5a4428] hover:bg-white'
           }`}
         >
           Regular Customer
         </button>
         <button
           onClick={() => setOrderType('program')}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-            orderType === 'program' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+            orderType === 'program'
+              ? 'bg-linear-to-r from-[#8f6d3f] to-[#725326] text-white shadow-[0_10px_20px_rgba(77,54,24,0.2)]'
+              : 'border border-[#ccb089] bg-white/85 text-[#5a4428] hover:bg-white'
           }`}
         >
           Company Employee
@@ -95,18 +112,42 @@ export default function NewOrderPage() {
 
       {/* Company Selector */}
       {orderType === 'program' && (
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
-          <select
-            value={selectedProgramId || ''}
-            onChange={e => setSelectedProgramId(e.target.value || null)}
-            className="w-full max-w-md px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900"
-          >
-            <option value="">Select a company...</option>
-            {programs.map(p => (
-              <option key={p.id} value={p.id}>{p.company_name}</option>
-            ))}
-          </select>
+        <div className="mb-6 space-y-4">
+          <div>
+            <label className="pos-label">Company</label>
+            <select
+              value={selectedProgramId || ''}
+              onChange={e => setSelectedProgramId(e.target.value || null)}
+              className="pos-input max-w-md"
+            >
+              <option value="">Select a company...</option>
+              {programs.map(p => (
+                <option key={p.id} value={p.id}>{p.company_name}</option>
+              ))}
+            </select>
+          </div>
+
+          {selectedProgram && (
+            <div className="rounded-xl border border-[#d9c7a7] bg-[#fffdf8] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7d6541]">Company Presets Attached</p>
+              <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3 text-sm text-[#5f492a]">
+                <p>
+                  <span className="font-semibold text-[#2f2416]">EU Package:</span> {selectedProgram.eu_package || '-'}
+                </p>
+                <p>
+                  <span className="font-semibold text-[#2f2416]">Service Tier:</span> {selectedProgram.service_tier || '-'}
+                </p>
+                <p>
+                  <span className="font-semibold text-[#2f2416]">Approval Flow:</span>{' '}
+                  {selectedProgram.approval_required ? 'Required' : 'Conditional'}
+                </p>
+              </div>
+              <p className="mt-2 text-sm text-[#5f492a]">
+                <span className="font-semibold text-[#2f2416]">Guidelines:</span>{' '}
+                {selectedProgram.restricted_guidelines || 'No company-specific guidelines entered.'}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -116,13 +157,14 @@ export default function NewOrderPage() {
           {(['customer', 'prescription', 'items', 'review'] as Step[]).map((s, i) => (
             <div
               key={s}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
-                step === s ? 'bg-blue-50 text-blue-600 border border-blue-200' :
+              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${
+                step === s ? 'border border-[#c9b08a] bg-[#f7efe3] text-[#5c4220]' :
                 (['customer', 'prescription', 'items', 'review'].indexOf(step) > i)
-                  ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+                  ? 'border border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border border-[#e5d5bb] bg-white/80 text-[#7d6541]'
               }`}
             >
-              <span className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-xs">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#efe1cc] text-xs font-bold text-[#5a4322]">
                 {i + 1}
               </span>
               <span className="capitalize">{s}</span>
@@ -132,14 +174,20 @@ export default function NewOrderPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm mb-6">{error}</div>
+        <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{error}</div>
       )}
 
       {/* Step Content */}
       {step === 'customer' && (
         <CustomerIntakeForm
-          onComplete={(c) => { setCustomer(c); setStep('prescription'); }}
+          onComplete={(c, context) => {
+            setCustomer(c);
+            if (context) setIntakeContext(context);
+            setStep('prescription');
+          }}
           existingCustomer={customer}
+          orderType={orderType}
+          selectedProgram={selectedProgram}
         />
       )}
 
@@ -163,50 +211,58 @@ export default function NewOrderPage() {
 
       {step === 'review' && (
         <div className="space-y-6">
-          <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
+          <div className="pos-panel-strong p-6">
+            <h2 className="mb-4 text-lg font-bold text-[#2a1f12]">Order Summary</h2>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
-                <p className="text-sm text-gray-500">Customer</p>
-                <p className="font-medium">{customer?.first_name} {customer?.last_name}</p>
+                <p className="text-sm text-[#7d6541]">Customer</p>
+                <p className="font-semibold text-[#322616]">{customer?.first_name} {customer?.last_name}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Order Type</p>
-                <p className="font-medium capitalize">{orderType}</p>
+                <p className="text-sm text-[#7d6541]">Order Type</p>
+                <p className="font-semibold capitalize text-[#322616]">{orderType}</p>
               </div>
               {prescription && (
                 <div>
-                  <p className="text-sm text-gray-500">Prescription</p>
-                  <p className="font-medium">Rx on file</p>
+                  <p className="text-sm text-[#7d6541]">Prescription</p>
+                  <p className="font-semibold text-[#322616]">Rx on file</p>
                 </div>
               )}
               {selectedProgramId && (
                 <div>
-                  <p className="text-sm text-gray-500">Company</p>
-                  <p className="font-medium">{programs.find(p => p.id === selectedProgramId)?.company_name}</p>
+                  <p className="text-sm text-[#7d6541]">Company</p>
+                  <p className="font-semibold text-[#322616]">{programs.find(p => p.id === selectedProgramId)?.company_name}</p>
+                </div>
+              )}
+              {orderType === 'program' && (
+                <div>
+                  <p className="text-sm text-[#7d6541]">Eligibility Status</p>
+                  <p className="font-semibold text-[#322616]">
+                    {intakeContext.eligibility_status === 'eligible' ? 'Eligible' : intakeContext.eligibility_status === 'not_eligible' ? 'Not eligible (supervisor approval required)' : 'Unknown (approval required)'}
+                  </p>
                 </div>
               )}
             </div>
 
             {orderType === 'regular' && (
               <div className="mb-4 max-w-xs">
-                <label className="mb-1 block text-sm font-medium text-gray-700">Discount</label>
+                <label className="pos-label">Discount</label>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={discount}
                   onChange={(e) => setDiscount(Math.max(Number(e.target.value) || 0, 0))}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900"
+                  className="pos-input"
                 />
               </div>
             )}
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] text-sm mb-4">
+              <table className="mb-4 w-full min-w-140 text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 text-gray-500">
+                  <tr className="border-b border-[#e4d4ba] text-xs uppercase tracking-wide text-[#7d6541]">
                     <th className="text-left py-2">Item</th>
                     <th className="text-left py-2">Type</th>
                     <th className="text-right py-2">Price</th>
@@ -214,39 +270,39 @@ export default function NewOrderPage() {
                 </thead>
                 <tbody>
                   {items.map((item, idx) => (
-                    <tr key={idx} className="border-b border-gray-100">
+                    <tr key={idx} className="border-b border-[#f1e5d3]">
                       <td className="py-2">{item.frame_brand} {item.frame_model}</td>
                       <td className="py-2 capitalize">{item.glasses_type?.replace(/_/g, ' ')}</td>
-                      <td className="py-2 text-right">${Number(item.line_total || 0).toFixed(2)}</td>
+                      <td className="py-2 text-right font-semibold text-[#3b2c1b]">${Number(item.line_total || 0).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="text-right space-y-1 text-sm">
+            <div className="space-y-1 text-right text-sm text-[#5f492a]">
               <p>Subtotal: <span className="font-medium">${subtotal.toFixed(2)}</span></p>
               {effectiveDiscount > 0 && (
                 <p>Discount: <span className="font-medium">-${effectiveDiscount.toFixed(2)}</span></p>
               )}
               <p>Tax (8.75%): <span className="font-medium">${tax.toFixed(2)}</span></p>
-              <p className="text-lg font-bold mt-2">Total: ${total.toFixed(2)}</p>
+              <p className="mt-2 text-lg font-extrabold text-[#2a1f12]">Total: ${total.toFixed(2)}</p>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setStep('items')}
-              className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition"
+              className="pos-btn-secondary px-6 py-3"
             >
               Back
             </button>
             <button
               onClick={handleSubmitOrder}
               disabled={submitting}
-              className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 rounded-lg font-semibold transition"
+              className="rounded-xl bg-linear-to-r from-[#0f766e] to-[#115e59] px-6 py-3 font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {submitting ? 'Creating Order...' : orderType === 'program' ? 'Submit for Approval' : 'Place Order'}
+              {submitting ? 'Creating Order...' : orderType === 'program' ? 'Submit Company Order' : 'Place Order'}
             </button>
           </div>
         </div>

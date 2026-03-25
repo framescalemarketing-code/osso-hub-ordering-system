@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getCurrentEmployee } from '@/lib/auth';
 import type { Customer, Order, Program } from '@/lib/types';
 
 type CustomerListItem = Pick<
@@ -26,6 +27,8 @@ function getProgramLabel(program?: { id: string } | null) {
 
 export default async function CustomersPage() {
   const supabase = await createServerSupabaseClient();
+  const employee = await getCurrentEmployee();
+  const canViewSensitive = ['admin', 'manager', 'optician'].includes(employee?.role || '');
 
   const [customersRes, ordersRes] = await Promise.all([
     supabase
@@ -55,15 +58,15 @@ export default async function CustomersPage() {
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Customers</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#2a1f12]">Customers</h1>
+          <p className="mt-1 text-sm text-[#6f5b40]">
             Click any customer to open their profile, recent orders, and notes.
           </p>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-        <div className="hidden xl:grid xl:grid-cols-[1.3fr_1.2fr_1fr_1.2fr_0.9fr_1fr_1.1fr_1fr] gap-4 border-b border-gray-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+      <div className="pos-panel-strong overflow-hidden">
+        <div className="hidden gap-4 border-b border-[#e4d4ba] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#7d6541] xl:grid xl:grid-cols-[1.3fr_1.2fr_1fr_1.2fr_0.9fr_1fr_1.1fr_1fr]">
           <span>Name</span>
           <span>Email</span>
           <span>Phone</span>
@@ -83,50 +86,50 @@ export default async function CustomersPage() {
               <Link
                 key={customer.id}
                 href={`/customers/${customer.id}`}
-                className="block border-b border-gray-100 px-4 py-4 transition hover:bg-gray-50"
+                className="block border-b border-[#f1e5d3] px-4 py-4 transition hover:bg-[#fffcf7]"
               >
                 <div className="grid gap-4 xl:grid-cols-[1.3fr_1.2fr_1fr_1.2fr_0.9fr_1fr_1.1fr_1fr]">
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">Name</p>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Name</p>
+                    <p className="font-semibold text-[#2f2416]">
                       {customer.first_name} {customer.last_name}
                     </p>
-                    {customer.notes && <p className="text-xs text-gray-500">{customer.notes}</p>}
+                    {customer.notes && <p className="text-xs text-[#6f5b40]">{customer.notes}</p>}
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">Email</p>
-                    <p className="break-all text-gray-600">{customer.email || '-'}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Email</p>
+                    <p className="break-all text-[#6f5b40]">{canViewSensitive ? customer.email || '-' : 'Restricted'}</p>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">Phone</p>
-                    <p className="text-gray-600">{customer.phone || '-'}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Phone</p>
+                    <p className="text-[#6f5b40]">{canViewSensitive ? customer.phone || '-' : 'Restricted'}</p>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">Program</p>
-                    <p className="font-medium text-gray-900">{getProgramLabel(program)}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Program</p>
+                    <p className="font-semibold text-[#2f2416]">{getProgramLabel(program)}</p>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">DOB</p>
-                    <p className="text-gray-600">{formatDate(customer.date_of_birth)}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">DOB</p>
+                    <p className="text-[#6f5b40]">{canViewSensitive ? formatDate(customer.date_of_birth) : 'Restricted'}</p>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">Recent Order</p>
-                    <p className="text-gray-600">{formatDate(recentOrderDate)}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Recent Order</p>
+                    <p className="text-[#6f5b40]">{formatDate(recentOrderDate)}</p>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">Company</p>
-                    <p className="text-gray-600">{program?.company_name || '-'}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Company</p>
+                    <p className="text-[#6f5b40]">{program?.company_name || '-'}</p>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 xl:hidden">Program Type</p>
-                    <p className="text-gray-600">{getProgramTypeLabel(program)}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Program Type</p>
+                    <p className="text-[#6f5b40]">{getProgramTypeLabel(program)}</p>
                   </div>
                 </div>
               </Link>
@@ -135,7 +138,7 @@ export default async function CustomersPage() {
         </div>
 
         {(!customers || customers.length === 0) && (
-          <div className="px-4 py-12 text-center text-gray-400">No customers yet</div>
+          <div className="px-4 py-12 text-center text-[#7b6340]">No customers yet</div>
         )}
       </div>
     </div>

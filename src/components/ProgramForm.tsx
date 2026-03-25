@@ -43,10 +43,16 @@ function emptyAdjustment(): PriceAdjustment {
   return { label: '', amount: 0 };
 }
 
-export default function ProgramForm() {
+type ProgramFormProps = {
+  initiallyOpen?: boolean;
+  showTrigger?: boolean;
+  redirectOnSave?: string;
+};
+
+export default function ProgramForm({ initiallyOpen = false, showTrigger = true, redirectOnSave }: ProgramFormProps) {
   const supabase = createClient();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen || !showTrigger);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<ProgramFormState>({
     company_name: '',
@@ -114,7 +120,9 @@ export default function ProgramForm() {
   async function handleSave() {
     if (!form.company_name.trim()) return;
     setSaving(true);
-    const { error } = await supabase.from('programs').insert({
+    const { data, error } = await supabase
+      .from('programs')
+      .insert({
       company_name: form.company_name.trim(),
       contact_name: form.contact_name.trim() || null,
       contact_email: form.contact_email.trim() || null,
@@ -135,17 +143,31 @@ export default function ProgramForm() {
       eu_package_custom_adjustments: safeParsePriceAdjustments(form.eu_package_custom_adjustments),
       service_tier: form.service_tier,
       service_tier_custom_adjustments: safeParsePriceAdjustments(form.service_tier_custom_adjustments),
-    });
+      })
+      .select('id')
+      .single();
     setSaving(false);
     if (error) {
       alert(`Failed to save company: ${error.message}`);
       return;
     }
+    if (redirectOnSave) {
+      router.push(redirectOnSave);
+      router.refresh();
+      return;
+    }
+
+    if (!showTrigger && data?.id) {
+      router.push(`/programs/${data.id}`);
+      router.refresh();
+      return;
+    }
+
     setOpen(false);
     router.refresh();
   }
 
-  if (!open) {
+  if (showTrigger && !open) {
     return (
       <button
         onClick={() => setOpen(true)}
@@ -402,12 +424,14 @@ export default function ProgramForm() {
         >
           {saving ? 'Saving...' : 'Save Company'}
         </button>
-        <button
-          onClick={() => setOpen(false)}
-          className="rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200"
-        >
-          Cancel
-        </button>
+        {showTrigger && (
+          <button
+            onClick={() => setOpen(false)}
+            className="rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200"
+          >
+            Cancel
+          </button>
+        )}
       </div>
     </div>
   );

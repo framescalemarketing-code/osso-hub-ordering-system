@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getCurrentEmployee } from '@/lib/auth';
 import type { Address, Customer, Order, Program } from '@/lib/types';
 import CompanyProfileManager from '@/components/CompanyProfileManager';
 import {
@@ -58,6 +59,8 @@ type CompanyDetailPageProps = {
 export default async function ProgramDetailPage({ params }: CompanyDetailPageProps) {
   const { id } = await params;
   const supabase = await createServerSupabaseClient();
+  const employee = await getCurrentEmployee();
+  const canManage = ['admin', 'manager'].includes(employee?.role || '');
 
   const { data: program } = await supabase
     .from('programs')
@@ -90,17 +93,17 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3">
-        <Link href="/programs" className="text-sm text-gray-500 hover:text-gray-800">
+        <Link href="/programs" className="text-sm font-semibold text-[#7d6541] hover:text-[#48341f]">
           {'<- Companies'}
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">{typedProgram.company_name}</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-3xl font-extrabold tracking-tight text-[#2a1f12]">{typedProgram.company_name}</h1>
+            <p className="mt-1 text-sm text-[#6f5b40]">
               {typedProgram.contact_name || 'No contact name'} - {typedProgram.contact_email || 'No contact email'}
             </p>
           </div>
-          <div className="rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700">
+          <div className="rounded-full border border-[#ccb089] bg-[#fff8ec] px-3 py-1.5 text-sm font-semibold text-[#6f522d]">
             {getProgramTypeLabel(typedProgram)}
           </div>
         </div>
@@ -108,7 +111,7 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="pos-panel p-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <p className="text-sm text-gray-500">POC Name</p>
@@ -129,7 +132,7 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="pos-panel p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Recent Orders</h2>
               <p className="text-sm text-gray-500">{recentOrders.length} total</p>
@@ -167,7 +170,7 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="pos-panel p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Active Members</h2>
               <p className="text-sm text-gray-500">{activeMembers.length} enrolled</p>
@@ -202,7 +205,7 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="pos-panel p-6">
             <h3 className="mb-3 text-sm font-semibold text-gray-500">Location</h3>
             <div className="space-y-4 text-sm">
               <div>
@@ -220,14 +223,14 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="pos-panel p-6">
             <h3 className="mb-3 text-sm font-semibold text-gray-500">Restricted Guidelines</h3>
             <p className="whitespace-pre-line text-sm text-gray-700">
               {typedProgram.restricted_guidelines || typedProgram.notes || 'No restricted guidelines recorded yet.'}
             </p>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="pos-panel p-6">
             <h3 className="mb-3 text-sm font-semibold text-gray-500">EU Package + Service Pricing</h3>
             <div className="space-y-2 text-sm text-gray-700">
               <p>EU Package: <span className="font-medium">{typedProgram.eu_package || '-'}</span></p>
@@ -238,7 +241,7 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="pos-panel p-6">
             <h3 className="mb-3 text-sm font-semibold text-gray-500">Loyalty / Referral Credits</h3>
             <p className="text-2xl font-bold text-gray-900">
               {(Number(typedProgram.loyalty_credit_count || 0) + Number(typedProgram.referral_credit_count || 0)).toString()}
@@ -266,26 +269,28 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
             </div>
           </div>
 
-          <CompanyProfileManager
-            id={typedProgram.id}
-            company_name={typedProgram.company_name}
-            contact_name={typedProgram.contact_name}
-            contact_email={typedProgram.contact_email}
-            contact_phone={typedProgram.contact_phone}
-            invoice_terms={typedProgram.invoice_terms}
-            approval_required={typedProgram.approval_required}
-            approver_emails={typedProgram.approver_emails || []}
-            program_type={typedProgram.program_type || null}
-            employee_count={typedProgram.employee_count || activeMembers.length}
-            restricted_guidelines={typedProgram.restricted_guidelines || typedProgram.notes}
-            loyalty_credit_count={typedProgram.loyalty_credit_count || 0}
-            referral_credit_count={typedProgram.referral_credit_count || 0}
-            eu_package={typedProgram.eu_package || null}
-            eu_package_add_ons={(typedProgram.eu_package_add_ons || []) as EUPackageAddOnKey[]}
-            eu_package_custom_adjustments={parsedEuAdjustments}
-            service_tier={typedProgram.service_tier || null}
-            service_tier_custom_adjustments={parsedServiceAdjustments}
-          />
+          {canManage && (
+            <CompanyProfileManager
+              id={typedProgram.id}
+              company_name={typedProgram.company_name}
+              contact_name={typedProgram.contact_name}
+              contact_email={typedProgram.contact_email}
+              contact_phone={typedProgram.contact_phone}
+              invoice_terms={typedProgram.invoice_terms}
+              approval_required={typedProgram.approval_required}
+              approver_emails={typedProgram.approver_emails || []}
+              program_type={typedProgram.program_type || null}
+              employee_count={typedProgram.employee_count || activeMembers.length}
+              restricted_guidelines={typedProgram.restricted_guidelines || typedProgram.notes}
+              loyalty_credit_count={typedProgram.loyalty_credit_count || 0}
+              referral_credit_count={typedProgram.referral_credit_count || 0}
+              eu_package={typedProgram.eu_package || null}
+              eu_package_add_ons={(typedProgram.eu_package_add_ons || []) as EUPackageAddOnKey[]}
+              eu_package_custom_adjustments={parsedEuAdjustments}
+              service_tier={typedProgram.service_tier || null}
+              service_tier_custom_adjustments={parsedServiceAdjustments}
+            />
+          )}
         </div>
       </div>
     </div>

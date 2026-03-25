@@ -17,10 +17,10 @@ export default async function DashboardPage() {
   ]);
 
   const stats = [
-    { label: 'Total Orders', value: ordersRes.count ?? 0, color: 'blue' },
-    { label: 'Customers', value: customersRes.count ?? 0, color: 'green' },
-    { label: 'Pending Approvals', value: pendingRes.count ?? 0, color: 'yellow' },
-    { label: "Today's Orders", value: todayRes.count ?? 0, color: 'purple' },
+    { label: 'Total Orders', value: ordersRes.count ?? 0, href: '/orders' },
+    { label: 'Customers', value: customersRes.count ?? 0, href: '/customers' },
+    { label: 'Pending Approvals', value: pendingRes.count ?? 0, href: '/orders?status=pending_approval' },
+    { label: "Today's Orders", value: todayRes.count ?? 0, href: '/orders' },
   ];
 
   // Recent orders
@@ -31,13 +31,20 @@ export default async function DashboardPage() {
     .limit(10);
   const typedRecentOrders = recentOrders as DashboardOrder[] | null;
 
+  function statusClass(status: string) {
+    if (status === 'completed') return 'bg-emerald-50 text-emerald-800 border border-emerald-200';
+    if (status === 'pending_approval') return 'bg-amber-50 text-amber-800 border border-amber-200';
+    if (status === 'cancelled') return 'bg-rose-50 text-rose-700 border border-rose-200';
+    return 'bg-[#f6efe3] text-[#5a4322] border border-[#d6c09b]';
+  }
+
   return (
     <div>
       <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight text-[#2a1f12]">Dashboard</h1>
         <Link
           href="/orders/new"
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition"
+          className="pos-btn-primary"
         >
           + New Order
         </Link>
@@ -45,35 +52,50 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map(s => (
-          <div key={s.label} className="bg-white border border-gray-200 rounded-xl p-6">
-            <p className="text-sm text-gray-500">{s.label}</p>
-            <p className="text-3xl font-bold mt-1">{s.value}</p>
-          </div>
+          <Link key={s.label} href={s.href} className="pos-panel block p-6 transition hover:border-[#ccb089] hover:bg-[#fffdf8]">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7b6340]">{s.label}</p>
+            <p className="mt-2 text-3xl font-extrabold text-[#2a1f12]">{s.value}</p>
+          </Link>
         ))}
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-800">Recent Orders</h2>
+      <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Link href="/eligibility" className="pos-panel p-5 transition hover:border-[#ccb089] hover:bg-[#fffdf8]">
+          <h3 className="text-base font-bold text-[#2a1f12]">Eligibility Snapshot</h3>
+          <p className="mt-1 text-sm text-[#6f5b40]">Open roster lookup and quickly add employees to customers.</p>
+        </Link>
+        <Link href="/programs" className="pos-panel p-5 transition hover:border-[#ccb089] hover:bg-[#fffdf8]">
+          <h3 className="text-base font-bold text-[#2a1f12]">Company Snapshot</h3>
+          <p className="mt-1 text-sm text-[#6f5b40]">Review company presets, guidelines, and approval settings.</p>
+        </Link>
+        <Link href="/search" className="pos-panel p-5 transition hover:border-[#ccb089] hover:bg-[#fffdf8]">
+          <h3 className="text-base font-bold text-[#2a1f12]">Quick Find</h3>
+          <p className="mt-1 text-sm text-[#6f5b40]">Jump to orders, customers, or companies from one search workspace.</p>
+        </Link>
+      </div>
+
+      <div className="pos-panel-strong overflow-hidden">
+        <div className="border-b border-[#d6c09b] px-5 py-4">
+          <h2 className="text-lg font-bold text-[#2a1f12]">Recent Orders</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-gray-500">
-                <th className="text-left px-4 py-3">Order #</th>
-                <th className="text-left px-4 py-3">Customer</th>
-                <th className="text-left px-4 py-3">Type</th>
-                <th className="text-left px-4 py-3">Status</th>
-                <th className="text-right px-4 py-3">Total</th>
-                <th className="text-left px-4 py-3">Date</th>
+              <tr className="border-b border-[#e4d4ba] text-xs uppercase tracking-wide text-[#7d6541]">
+                <th className="px-4 py-3 text-left">Order #</th>
+                <th className="px-4 py-3 text-left">Customer</th>
+                <th className="px-4 py-3 text-left">Type</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-right">Total</th>
+                <th className="px-4 py-3 text-left">Date</th>
               </tr>
             </thead>
             <tbody>
               {typedRecentOrders && typedRecentOrders.length > 0 ? (
                 typedRecentOrders.map(order => (
-                  <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr key={order.id} className="border-b border-[#f1e5d3] hover:bg-[#fffcf7]">
                     <td className="px-4 py-3">
-                      <Link href={`/orders/${order.id}`} className="text-blue-600 hover:underline font-medium">
+                      <Link href={`/orders/${order.id}`} className="font-semibold text-[#6f522d] hover:text-[#47331b]">
                         {order.order_number}
                       </Link>
                     </td>
@@ -82,25 +104,20 @@ export default async function DashboardPage() {
                     </td>
                     <td className="px-4 py-3 capitalize">{order.order_type}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        order.status === 'completed' ? 'bg-green-100 text-green-700' :
-                        order.status === 'pending_approval' ? 'bg-amber-100 text-amber-700' :
-                        order.status === 'cancelled' ? 'bg-red-100 text-red-600' :
-                        'bg-blue-100 text-blue-700'
-                      }`}>
+                      <span className={`pos-badge ${statusClass(order.status)}`}>
                         {order.status.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">${Number(order.total).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className="px-4 py-3 text-right font-semibold text-[#3b2c1b]">${Number(order.total).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-[#705c40]">
                       {new Date(order.created_at).toLocaleDateString()}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                    No orders yet. <Link href="/orders/new" className="text-blue-600 hover:underline font-medium">Create your first order</Link>
+                  <td colSpan={6} className="px-4 py-8 text-center text-[#7b6340]">
+                    No orders yet. <Link href="/orders/new" className="font-semibold text-[#6f522d] hover:underline">Create your first order</Link>
                   </td>
                 </tr>
               )}
