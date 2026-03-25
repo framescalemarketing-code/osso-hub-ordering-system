@@ -6,7 +6,7 @@ export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 export type GlassesType = 'safety_rx' | 'safety_non_rx' | 'non_safety_rx' | 'non_safety_non_rx';
 export type LensVendor = 'nassau' | 'abb_optical' | 'other';
 export type ReminderType = 'follow_up' | 'order_update' | 'approval_needed' | 'invoice_due';
-export type ReminderStatus = 'pending' | 'sent' | 'cancelled';
+export type ReminderStatus = 'pending' | 'processing' | 'sent' | 'cancelled';
 
 export interface Address {
   street: string;
@@ -35,6 +35,12 @@ export interface Program {
   contact_name: string | null;
   contact_email: string | null;
   contact_phone: string | null;
+  location_address?: Address | null;
+  program_type?: string | null;
+  employee_count?: number | null;
+  restricted_guidelines?: string | null;
+  loyalty_credit_count?: number;
+  referral_credit_count?: number;
   billing_address: Address | null;
   shipping_address: Address | null;
   approval_required: boolean;
@@ -44,6 +50,8 @@ export interface Program {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Derived / optional presentation fields
+  credit_count?: number | null;
 }
 
 export interface Customer {
@@ -66,8 +74,11 @@ export interface Customer {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  recent_order_date?: string | null;
   // Relations
   program?: Program | null;
+  orders?: Order[];
+  prescriptions?: Prescription[];
 }
 
 export interface Prescription {
@@ -188,6 +199,10 @@ export interface Reminder {
   body: string | null;
   due_at: string;
   status: ReminderStatus;
+  processing_at: string | null;
+  processing_by: string | null;
+  attempts: number;
+  last_error: string | null;
   sent_at: string | null;
   created_at: string;
 }
@@ -202,6 +217,25 @@ export interface SyncLog {
   error_message: string | null;
   attempts: number;
   created_at: string;
+}
+
+export type IntegrationJobStatus = 'pending' | 'processing' | 'succeeded' | 'failed';
+
+export interface IntegrationJob {
+  id: string;
+  order_id: string;
+  integration: 'clickup' | 'netsuite' | 'quickbooks' | 'bigquery' | 'mailchimp';
+  status: IntegrationJobStatus;
+  attempts: number;
+  max_attempts: number;
+  next_run_at: string;
+  locked_at: string | null;
+  locked_by: string | null;
+  external_id: string | null;
+  last_error: string | null;
+  payload: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
 }
 
 // ─── Enrollment (migration 006) ────────────────────────────────────────────
