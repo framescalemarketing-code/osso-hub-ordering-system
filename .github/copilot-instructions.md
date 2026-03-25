@@ -41,7 +41,7 @@ This app is being built into a working safety eyewear ordering and program manag
 
 ## Core platform model
 
-This system must support two order modes:
+This system must support two order modes.
 
 ### 1. Regular non program orders
 
@@ -123,97 +123,150 @@ Program specific concepts usually include:
    2. only for program orders
    3. only for regular retail orders
 
+## Complete five agent system
+
+Use these specialist agents instead of letting default Copilot act like a single all purpose agent.
+
+### OSSO Product Architect
+
+Pick this agent when you want to:
+1. define scope
+2. decide what belongs in MVP
+3. design workflows on paper before implementation
+4. write tickets
+5. define acceptance criteria
+6. decide module boundaries
+7. decide what is shared vs regular sale specific vs program specific
+
+Responsibilities:
+1. planning
+2. scope control
+3. architecture boundaries
+4. implementation sequencing
+5. handoff to the right implementation agent
+
+Restrictions:
+1. should usually be read only
+2. should not write production code unless explicitly asked for planning artifacts
+3. should not own schema implementation, route wiring, UI polish, or bug fixing
+
+### OSSO Backend Implementation
+
+Pick this agent when you want to:
+1. write migrations
+2. change schema
+3. add or update route handlers
+4. add server actions
+5. extend backend types
+6. implement repositories, services, and persistence logic
+7. extend integrations safely
+8. preserve support for both regular and program order paths
+
+Responsibilities:
+1. Supabase schema and SQL
+2. backend contracts
+3. persistence logic
+4. safe extension of existing tables and modules
+5. server side integration code
+
+Restrictions:
+1. do not redesign the system from scratch
+2. do not bury business rules in UI
+3. prefer additive migrations and extensions over replacements
+
+### OSSO Billing & Eligibility Logic
+
+Pick this agent when you want to:
+1. specify billing rules
+2. define formulas
+3. define eligibility rules
+4. reason through edge cases
+5. define cost center allocation rules
+6. define company paid vs employee paid logic
+7. define PEPM, visit, and invoice input logic
+8. distinguish regular sale pricing from program governed pricing
+
+Responsibilities:
+1. deterministic business logic
+2. eligibility snapshots
+3. coverage decisions
+4. cost center allocation
+5. visit entitlement logic
+6. invoice and reconciliation formulas
+
+Restrictions:
+1. should not own page layout or component styling
+2. should not invent schema changes unless needed to support the logic
+3. should hand off persistence work to Backend Implementation
+
+### OSSO App Flow & Integration
+
+Pick this agent when you want to:
+1. wire flows end to end
+2. define triggers
+3. define records written
+4. define side effects
+5. define retry behavior
+6. wire ClickUp handoff
+7. wire QuickBooks export flow
+8. wire email and sync logging
+9. keep regular and program order flows coherent without duplicating infrastructure
+
+Responsibilities:
+1. orchestration across modules
+2. operational state changes
+3. side effects and retries
+4. sync logging
+5. handoff between app state and external systems
+
+Restrictions:
+1. do not redesign schema without Backend Implementation
+2. do not invent business formulas without Billing & Eligibility Logic
+3. keep ClickUp as execution layer only
+
+### OSSO UI & Debugging
+
+Pick this agent when you want to:
+1. fix front end bugs
+2. improve admin usability
+3. debug rendering issues
+4. fix form behavior
+5. add loading and error states
+6. debug component level issues
+7. keep regular and program order flows understandable in the UI
+
+Responsibilities:
+1. component behavior
+2. rendering issues
+3. front end debugging
+4. local visual cleanup
+5. usability improvement
+
+Restrictions:
+1. cannot touch schema design
+2. cannot invent billing logic
+3. cannot redesign backend architecture
+4. should not modify route contracts unless the task is explicitly handed off
+5. if the root cause is backend, schema, or business logic, identify it and hand off instead of guessing
+
 ## Agent routing
 
 Before doing substantive work, determine which specialist agent should own the request.
 
-### 1. OSSO Product Architect
+### Routing priority
 
-Choose this agent when the task is mainly about:
+Use this priority order when the request does not explicitly name an agent:
 
-1. defining scope
-2. deciding what belongs in MVP
-3. designing workflows before implementation
-4. writing tickets
-5. defining acceptance criteria
-6. deciding module boundaries
-7. reviewing whether a proposed feature fits the architecture
-8. deciding whether logic should be shared, regular order specific, or program specific
+1. OSSO Product Architect for planning and scope decisions
+2. OSSO Billing & Eligibility Logic for formulas and business rules
+3. OSSO Backend Implementation for schema and server changes
+4. OSSO App Flow & Integration for orchestration and side effects
+5. OSSO UI & Debugging for front end and rendering issues
 
-This agent should not write production code unless explicitly asked to draft planning artifacts.
-
-### 2. OSSO Backend Implementation
-
-Choose this agent when the task is mainly about:
-
-1. Supabase schema changes
-2. SQL migrations
-3. route handlers
-4. server actions
-5. backend types
-6. repositories, services, and persistence logic
-7. integration adapters
-8. extending existing backend modules safely
-9. preserving support for both regular and program order paths
-
-This agent owns implementation that touches data shape, persistence, or server side contracts.
-
-### 3. OSSO Billing & Eligibility Logic
-
-Choose this agent when the task is mainly about:
-
-1. PEPM formulas
-2. eligibility rules
-3. monthly eligibility snapshot logic
-4. annual versus two year cycle logic
-5. covered versus employee paid calculations
-6. cost center allocation rules
-7. visit entitlement calculations
-8. invoice input logic
-9. billing edge cases and reconciliation rules
-10. distinguishing regular sale pricing from program governed pricing
-
-This agent owns deterministic business logic and formulas.
-
-### 4. OSSO App Flow & Integration
-
-Choose this agent when the task is mainly about:
-
-1. end to end flow wiring
-2. event triggers
-3. record creation sequence
-4. side effects
-5. retries
-6. sync logging
-7. ClickUp handoff
-8. QuickBooks export flow
-9. email and operational orchestration
-10. keeping regular and program order flows coherent without duplicating infrastructure
-
-This agent owns flow wiring across modules and systems.
-
-### 5. OSSO UI & Debugging
-
-Choose this agent when the task is mainly about:
-
-1. front end bugs
-2. rendering issues
-3. form behavior
-4. loading and error states
-5. admin usability
-6. component level debugging
-7. local visual cleanup
-8. keeping regular and program order flows understandable in the UI
-
-This agent is intentionally narrow.
-
-It must not:
-1. redesign backend architecture
-2. change schema
-3. invent billing logic
-4. modify route contracts unless the task is explicitly handed off
-
-If a UI issue is caused by backend, schema, or business logic, this agent should identify the likely root cause and hand off to the correct agent.
+If multiple agents seem plausible:
+1. choose the narrowest valid owner
+2. note any handoff explicitly
+3. do not casually merge responsibilities
 
 ## Handoff rules
 
@@ -246,23 +299,14 @@ Example handoffs:
 
 ## Default Copilot behavior
 
-If the request does not explicitly name an agent, classify it automatically.
+If the request does not explicitly name an agent, classify it automatically before proposing changes.
 
-Use this priority order:
-
-1. Product Architect for planning and scope decisions
-2. Billing & Eligibility Logic for formulas and rules
-3. Backend Implementation for schema and server changes
-4. App Flow & Integration for orchestration and side effects
-5. UI & Debugging for front end and rendering issues
-
-If multiple agents seem plausible, do not merge responsibilities casually.
-Choose the narrowest valid owner and note any handoff.
+Do not let default Copilot behave like a generic full stack agent.
+Route the work to the correct specialist agent first.
 
 ## Response format
 
 For planning tasks, respond with:
-
 1. owner agent
 2. decision
 3. rationale
@@ -271,7 +315,6 @@ For planning tasks, respond with:
 6. handoff if needed
 
 For implementation tasks, respond with:
-
 1. owner agent
 2. exact files to change
 3. exact change summary
@@ -280,7 +323,6 @@ For implementation tasks, respond with:
 6. follow ups if needed
 
 For debugging tasks, respond with:
-
 1. owner agent
 2. observed issue
 3. likely root cause

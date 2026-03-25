@@ -106,14 +106,14 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
   const labelClass = "block text-sm font-medium text-gray-700 mb-1";
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6">
+    <div className="bg-white border border-gray-200 rounded-xl p-6" suppressHydrationWarning>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold">Customer Information</h2>
         <div className="flex gap-2">
-          <button onClick={() => setMode('search')} className={`px-3 py-1.5 rounded text-sm ${mode === 'search' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          <button suppressHydrationWarning onClick={() => setMode('search')} className={`px-3 py-1.5 rounded text-sm ${mode === 'search' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             Search Existing
           </button>
-          <button onClick={() => setMode('new')} className={`px-3 py-1.5 rounded text-sm ${mode === 'new' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          <button suppressHydrationWarning onClick={() => setMode('new')} className={`px-3 py-1.5 rounded text-sm ${mode === 'new' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             New Customer
           </button>
         </div>
@@ -131,7 +131,7 @@ export default function CustomerIntakeForm({ onComplete, existingCustomer }: Pro
               suppressHydrationWarning
               className={inputClass + ' flex-1'}
             />
-            <button onClick={handleSearch} className="px-4 py-2 bg-blue-600 rounded-lg text-sm font-medium">Search</button>
+            <button suppressHydrationWarning onClick={handleSearch} className="px-4 py-2 bg-blue-600 rounded-lg text-sm font-medium">Search</button>
           </div>
 
           {searchResults.length > 0 && (
