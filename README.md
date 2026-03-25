@@ -85,8 +85,8 @@ Order integrations are enqueued in `integration_jobs` and processed by `/api/job
 ## Scheduler / server readiness
 
 `vercel.json` includes cron jobs:
-- `*/5 * * * *` -> `/api/jobs/process`
-- `*/30 * * * *` -> `/api/reminders/process`
+- `0 9 * * *` -> `/api/jobs/process`
+- `30 9 * * *` -> `/api/reminders/process`
 
 Set `CRON_SECRET` in Vercel and keep `JOB_RUNNER_SECRET` aligned so cron calls are authorized.
 
@@ -98,10 +98,27 @@ Set `CRON_SECRET` in Vercel and keep `JOB_RUNNER_SECRET` aligned so cron calls a
 - Autofix (`.github/workflows/autofix.yml`): daily conservative PRs for lint fixes and lockfile maintenance
 - Dependabot (`.github/dependabot.yml`): daily npm updates and weekly GitHub Actions updates
 
+## Branching model
+
+- `main`: production branch
+- `develop`: integration branch
+- `feature/*`, `fix/*`, `chore/*`: day-to-day development branches (PR into `develop`)
+- `hotfix/*`: urgent production patches (branch from `main`, merge back to `main` and `develop`)
+
+Branch protections can be re-applied with:
+
+```bash
+npm run repo:protect
+```
+
 ## Commands
 
 - `npm run dev`
+- `npm run dev:debug`
 - `npm run lint`
+- `npm run lint:fix`
 - `npm run typecheck`
+- `npm run check:fast`
+- `npm run check`
 - `npm run build`
 - `npm run start`

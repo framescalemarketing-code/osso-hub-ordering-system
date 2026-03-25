@@ -4,10 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:debug": "node --inspect ./node_modules/next/dist/bin/next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "check:fast": "npm run lint && npm run typecheck",
+    "check": "npm run check:fast && npm run build",
+    "repo:protect": "node ./scripts/github/apply-branch-protection.mjs"
+  },
+  "engines": {
+    "node": ">=20.9.0 <21"
   },
   "dependencies": {
     "@google-cloud/bigquery": "^6.0.1",
