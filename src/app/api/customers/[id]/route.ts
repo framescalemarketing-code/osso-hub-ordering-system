@@ -21,12 +21,19 @@ function normalizeText(value: string | null | undefined): string | null {
   return normalized ? normalized : null;
 }
 
+function canManageCustomerProfile(role?: string | null): boolean {
+  return ['admin', 'manager'].includes(role || '');
+}
+
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const employee = await getCurrentEmployee();
   if (!employee) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!canManageCustomerProfile(employee.role)) {
+    return NextResponse.json({ error: 'Only admin and manager roles can update customers' }, { status: 403 });
+  }
 
   let body: CustomerPatchPayload;
   try {
@@ -69,7 +76,7 @@ export async function DELETE(
 ): Promise<NextResponse> {
   const employee = await getCurrentEmployee();
   if (!employee) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!['admin', 'manager'].includes(employee.role)) {
+  if (!canManageCustomerProfile(employee.role)) {
     return NextResponse.json({ error: 'Only admin and manager roles can archive customers' }, { status: 403 });
   }
 

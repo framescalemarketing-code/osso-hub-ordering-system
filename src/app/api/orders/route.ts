@@ -32,9 +32,13 @@ export async function POST(request: NextRequest) {
   if (!customer_id || !items?.length) {
     return NextResponse.json({ error: 'Customer and items required' }, { status: 400 });
   }
+  if (!order_type || !['regular', 'program'].includes(order_type)) {
+    return NextResponse.json({ error: 'order_type must be regular or program' }, { status: 400 });
+  }
 
   const subtotal = items.reduce((sum, i) => sum + (Number(i.line_total) || 0), 0);
-  const normalizedDiscount = Math.min(Math.max(Number(discount) || 0, 0), subtotal);
+  const requestedDiscount = Math.min(Math.max(Number(discount) || 0, 0), subtotal);
+  const normalizedDiscount = order_type === 'program' ? 0 : requestedDiscount;
   const taxableSubtotal = Math.max(subtotal - normalizedDiscount, 0);
   const tax = Math.round(taxableSubtotal * 0.0875 * 100) / 100;
   const total = taxableSubtotal + tax;
