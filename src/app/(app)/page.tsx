@@ -75,7 +75,7 @@ export default async function DashboardPage() {
           <h2 className="text-lg font-bold text-[#2a1f12]">Recent Orders</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="w-full min-w-190 text-sm">
             <thead>
               <tr className="border-b border-[#e4d4ba] text-xs uppercase tracking-wide text-[#7d6541]">
                 <th className="px-4 py-3 text-left">Order #</th>
