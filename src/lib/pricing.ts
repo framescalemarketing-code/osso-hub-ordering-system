@@ -1,5 +1,7 @@
-export type EUPackage = 'Compliance' | 'Comfort' | 'Complete' | 'Covered';
-export type ServiceTier = 'Essential' | 'Access' | 'Premier' | 'Enterprise';
+import type { EuPackageLabel, ServiceTierLabel } from '@/lib/ordering-domain';
+
+export type EUPackage = EuPackageLabel;
+export type ServiceTier = ServiceTierLabel;
 export type EUPackageAddOnKey =
   | 'antiFog'
   | 'antiReflectiveStd'
@@ -26,19 +28,16 @@ export const PRICING = {
     Compliance: 235,
     Comfort: 290,
     Complete: 435,
-    Covered: 435,
   } satisfies Record<EUPackage, number>,
   serviceFeePerEmployee: {
     Essential: 65,
     Access: 85,
     Premier: 105,
-    Enterprise: 155,
   } satisfies Record<ServiceTier, number>,
   standardVisitsByTier: {
     Essential: 2,
     Access: 6,
     Premier: 12,
-    Enterprise: 24,
   } satisfies Record<ServiceTier, number>,
   euPackageAddOnsPerEmployee: {
     antiFog: 65,

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { EmployeeRole, Order } from '@/lib/types';
 
-type OrderActionsOrder = Pick<Order, 'id' | 'status' | 'invoice_sent_at'>;
+type OrderActionsOrder = Pick<Order, 'id' | 'status'>;
 
 export default function OrderActions({ order, employeeRole }: { order: OrderActionsOrder; employeeRole: EmployeeRole }) {
   const [loading, setLoading] = useState('');
@@ -14,16 +14,6 @@ export default function OrderActions({ order, employeeRole }: { order: OrderActi
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
-    });
-    window.location.reload();
-  }
-
-  async function sendInvoice() {
-    setLoading('invoice');
-    await fetch('/api/invoices', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order_id: order.id }),
     });
     window.location.reload();
   }
@@ -54,12 +44,6 @@ export default function OrderActions({ order, employeeRole }: { order: OrderActi
         <button onClick={() => updateStatus('completed')} disabled={!!loading}
           className="rounded-xl bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-50">
           {loading === 'completed' ? '...' : 'Mark Complete'}
-        </button>
-      )}
-      {canManage && !order.invoice_sent_at && order.status !== 'draft' && order.status !== 'cancelled' && (
-        <button onClick={sendInvoice} disabled={!!loading}
-          className="pos-btn-secondary border-[#b99765] text-[#4f3a21] disabled:opacity-50">
-          {loading === 'invoice' ? '...' : 'Send Invoice'}
         </button>
       )}
       {canManage && !['completed', 'cancelled'].includes(order.status) && (

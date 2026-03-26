@@ -11,7 +11,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const supabase = await createServerSupabaseClient();
 
   let customers: Array<{ id: string; first_name: string; last_name: string; email: string | null; employer: string | null }> = [];
-  let companies: Array<{ id: string; company_name: string; contact_name: string | null; contact_email: string | null }> = [];
+  let companies: Array<{ id: string; company_name: string; company_code: string | null; contact_name: string | null; contact_email: string | null }> = [];
   let orders: Array<{ id: string; order_number: string; status: string; order_type: string }> = [];
 
   if (query.length >= 2) {
@@ -24,8 +24,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         .limit(20),
       supabase
         .from('programs')
-        .select('id, company_name, contact_name, contact_email')
-        .or(`company_name.ilike.%${query}%,contact_name.ilike.%${query}%,contact_email.ilike.%${query}%`)
+        .select('id, company_name, company_code, contact_name, contact_email')
+        .or(`company_name.ilike.%${query}%,company_code.ilike.%${query}%,contact_name.ilike.%${query}%,contact_email.ilike.%${query}%`)
         .eq('is_active', true)
         .limit(20),
       supabase
@@ -43,7 +43,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-[#2a1f12]">Quick Search</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight text-[#2a1f12]">Search Results</h1>
         <p className="mt-1 text-sm text-[#6f5b40]">Results for: <span className="font-semibold text-[#2f2416]">{query || '-'}</span></p>
       </div>
 
@@ -86,6 +86,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               {companies.map((company) => (
                 <Link key={company.id} href={`/programs/${company.id}`} className="block rounded-lg border border-[#e5d5bb] bg-[#fffdf8] px-3 py-2 text-sm hover:bg-white">
                   <span className="font-semibold text-[#2f2416]">{company.company_name}</span>
+                  <span className="ml-3 text-[#6f5b40]">{company.company_code || '-'}</span>
                   <span className="ml-3 text-[#6f5b40]">{company.contact_name || '-'}</span>
                   <span className="ml-3 text-[#6f5b40]">{company.contact_email || '-'}</span>
                 </Link>

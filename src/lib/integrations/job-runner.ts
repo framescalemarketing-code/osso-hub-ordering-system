@@ -1,38 +1,18 @@
 import { syncToClickUp } from './clickup';
-import { syncToNetSuite } from './netsuite';
-import { syncToQuickBooks } from './quickbooks';
 import { writeOrderToBigQuery } from './bigquery';
-import { syncToMailchimp } from './mailchimp';
 import type { Customer, Order, OrderItem, Program } from '@/lib/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type IntegrationJobRecord = {
   id: string;
   order_id: string;
-  integration: 'clickup' | 'netsuite' | 'quickbooks' | 'bigquery' | 'mailchimp';
+  integration: 'clickup' | 'bigquery';
   attempts: number;
   max_attempts: number;
 };
 
 export type IntegrationJobClaim = IntegrationJobRecord & {
   payload: Record<string, unknown>;
-};
-
-export type ReminderClaim = {
-  id: string;
-  order_id: string | null;
-  customer_id: string | null;
-  employee_id: string | null;
-  reminder_type: string;
-  subject: string;
-  body: string | null;
-  due_at: string;
-  attempts: number;
-  customer_first_name: string | null;
-  customer_last_name: string | null;
-  customer_email: string | null;
-  customer_phone: string | null;
-  order_number: string | null;
 };
 
 type OrderSyncContext = {
@@ -84,10 +64,7 @@ export async function runIntegrationForOrder(
   let externalId: string | null = null;
 
   if (integration === 'clickup') externalId = await syncToClickUp(fullOrder);
-  else if (integration === 'netsuite') externalId = await syncToNetSuite(fullOrder);
-  else if (integration === 'quickbooks') externalId = await syncToQuickBooks(fullOrder);
   else if (integration === 'bigquery') await writeOrderToBigQuery(fullOrder);
-  else if (integration === 'mailchimp') externalId = await syncToMailchimp(context.customer);
 
   await serviceClient.from('sync_log').insert({
     integration,
@@ -99,10 +76,8 @@ export async function runIntegrationForOrder(
     last_attempt_at: new Date().toISOString(),
   });
 
-  const orderUpdates: Partial<Pick<Order, 'clickup_task_id' | 'netsuite_id' | 'quickbooks_id' | 'bigquery_synced_at'>> = {};
+  const orderUpdates: Partial<Pick<Order, 'clickup_task_id' | 'bigquery_synced_at'>> = {};
   if (integration === 'clickup' && externalId) orderUpdates.clickup_task_id = externalId;
-  if (integration === 'netsuite' && externalId) orderUpdates.netsuite_id = externalId;
-  if (integration === 'quickbooks' && externalId) orderUpdates.quickbooks_id = externalId;
   if (integration === 'bigquery') orderUpdates.bigquery_synced_at = new Date().toISOString();
 
   if (Object.keys(orderUpdates).length) {
@@ -130,23 +105,6 @@ export async function claimIntegrationJobs(
   }
 
   return ((data as IntegrationJobClaim[] | null) || []) as IntegrationJobClaim[];
-}
-
-export async function claimDueReminders(
-  serviceClient: SupabaseClient,
-  params: { workerId: string; limit: number; staleAfterMinutes?: number }
-): Promise<ReminderClaim[]> {
-  const { data, error } = await serviceClient.rpc('claim_due_reminders', {
-    p_worker_id: params.workerId,
-    p_limit: params.limit,
-    p_stale_after_minutes: params.staleAfterMinutes ?? 30,
-  });
-
-  if (error) {
-    throw new Error(`Failed to claim reminders: ${error.message}`);
-  }
-
-  return ((data as ReminderClaim[] | null) || []) as ReminderClaim[];
 }
 
 export async function runWithConcurrencyLimit<T>(

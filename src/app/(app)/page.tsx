@@ -68,10 +68,6 @@ export default async function DashboardPage() {
           <h3 className="text-base font-bold text-[#2a1f12]">Company Snapshot</h3>
           <p className="mt-1 text-sm text-[#6f5b40]">Review company presets, guidelines, and approval settings.</p>
         </Link>
-        <Link href="/search" className="pos-panel p-5 transition hover:border-[#ccb089] hover:bg-[#fffdf8]">
-          <h3 className="text-base font-bold text-[#2a1f12]">Quick Find</h3>
-          <p className="mt-1 text-sm text-[#6f5b40]">Jump to orders, customers, or companies from one search workspace.</p>
-        </Link>
       </div>
 
       <div className="pos-panel-strong overflow-hidden">

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
+import { getProgramEligibilityFieldConfiguration } from '@/lib/programs/service';
 import { createServerSupabaseClient, createServiceClient } from '@/lib/supabase/server';
 
 // This route must run in the Node.js runtime to use Node's crypto module.
@@ -22,8 +23,22 @@ import { createServerSupabaseClient, createServiceClient } from '@/lib/supabase/
 // Example header row:
 //   first_name,last_name,external_id,email,cost_center,coverage_tier,effective_from
 
-const REQUIRED_HEADERS = ['first_name', 'last_name'] as const;
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+const ELIGIBILITY_HEADER_ALIASES = {
+  employeeId: ['employeeid', 'employee_id', 'external_id'],
+  firstName: ['firstname', 'first_name'],
+  lastName: ['lastname', 'last_name'],
+  email: ['email', 'employee_email'],
+  companyId: ['companyid', 'company_id', 'company_code'],
+  department: ['department', 'cost_center', 'cost_center_code'],
+  location: ['location', 'site', 'site_location'],
+  eligibilityStatus: ['eligibilitystatus', 'eligibility_status', 'status'],
+  hireDate: ['hiredate', 'hire_date'],
+  allowanceGroup: ['allowancegroup', 'allowance_group', 'coverage_tier'],
+  notes: ['notes', 'note'],
+  effectiveFrom: ['effectivefrom', 'effective_from'],
+} as const;
 
 // ─── Types used only within this module ───────────────────────────────────
 
@@ -39,7 +54,9 @@ interface ValidEnrollmentRow {
   employee_email: string | null;
   cost_center_code: string | null;
   coverage_tier: string | null;
+  status: 'active' | 'suspended';
   effective_from: string;
+  metadata: Record<string, unknown>;
 }
 
 // ─── CSV parsing helpers ───────────────────────────────────────────────────
@@ -113,6 +130,35 @@ function isValidEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 }
 
+function normalizeHeaderKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function hasEligibilityHeader(headers: string[], key: keyof typeof ELIGIBILITY_HEADER_ALIASES): boolean {
+  const normalizedHeaders = new Set(headers.map(normalizeHeaderKey));
+  return ELIGIBILITY_HEADER_ALIASES[key].some((alias) => normalizedHeaders.has(alias));
+}
+
+function getEligibilityField(
+  fields: string[],
+  headers: string[],
+  key: keyof typeof ELIGIBILITY_HEADER_ALIASES
+): string | null {
+  for (const alias of ELIGIBILITY_HEADER_ALIASES[key]) {
+    const headerIndex = headers.findIndex((header) => normalizeHeaderKey(header) === alias);
+    if (headerIndex === -1) continue;
+    const value = (fields[headerIndex] ?? '').trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+function normalizeEnrollmentStatus(value: string | null): 'active' | 'suspended' {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized || normalized === 'eligible' || normalized === 'active') return 'active';
+  return 'suspended';
+}
+
 // ─── Route handler ─────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -175,11 +221,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Program is not active' }, { status: 400 });
   }
 
+  const serviceClient = createServiceClient();
+  const eligibilityFields = await getProgramEligibilityFieldConfiguration(serviceClient, programId);
+  const activeEligibilityFields = eligibilityFields.filter((field) => field.active);
+  const requiredEligibilityFields = activeEligibilityFields.filter((field) => field.required);
+
   // ── Checksum and idempotency check ────────────────────────────────────────
   const fileBuffer = Buffer.from(await file.arrayBuffer());
   const checksum = createHash('sha256').update(fileBuffer).digest('hex');
-
-  const serviceClient = createServiceClient();
 
   const { data: existingImport } = await serviceClient
     .from('enrollment_imports')
@@ -245,7 +294,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const { headers, rawRows } = parseCSV(csvText);
 
   // Validate required column presence
-  const missingRequired = REQUIRED_HEADERS.filter(h => !headers.includes(h));
+  const missingRequired = requiredEligibilityFields
+    .map((field) => field.key)
+    .filter((key) => key !== 'companyId')
+    .filter((key) => {
+      switch (key) {
+        case 'employeeId':
+          return !hasEligibilityHeader(headers, 'employeeId');
+        case 'firstName':
+          return !hasEligibilityHeader(headers, 'firstName');
+        case 'lastName':
+          return !hasEligibilityHeader(headers, 'lastName');
+        case 'email':
+          return !hasEligibilityHeader(headers, 'email');
+        case 'department':
+          return !hasEligibilityHeader(headers, 'department');
+        case 'location':
+          return !hasEligibilityHeader(headers, 'location');
+        case 'eligibilityStatus':
+          return !hasEligibilityHeader(headers, 'eligibilityStatus');
+        case 'hireDate':
+          return !hasEligibilityHeader(headers, 'hireDate');
+        case 'allowanceGroup':
+          return !hasEligibilityHeader(headers, 'allowanceGroup');
+        case 'notes':
+          return !hasEligibilityHeader(headers, 'notes');
+        default:
+          return false;
+      }
+    });
   if (missingRequired.length > 0) {
     return failImport(
       `Missing required columns: ${missingRequired.join(', ')}`,
@@ -253,22 +330,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         import_id: importId,
         error: 'CSV is missing required columns',
         missing_columns: missingRequired,
-        required_columns: [...REQUIRED_HEADERS],
-        optional_columns: ['external_id', 'email', 'cost_center', 'coverage_tier', 'effective_from'],
+        required_columns: requiredEligibilityFields.map((field) => field.key),
+        optional_columns: activeEligibilityFields
+          .filter((field) => !field.required)
+          .map((field) => field.key),
       },
       400
     );
   }
 
-  // At least one identity column must be present in the file header
-  const hasExternalId = headers.includes('external_id');
-  const hasEmail = headers.includes('email');
-  if (!hasExternalId && !hasEmail) {
+  const hasExternalId = hasEligibilityHeader(headers, 'employeeId');
+  const hasEmail = hasEligibilityHeader(headers, 'email');
+  const acceptsEmployeeId = activeEligibilityFields.some((field) => field.key === 'employeeId');
+  const acceptsEmail = activeEligibilityFields.some((field) => field.key === 'email');
+  if ((acceptsEmployeeId && !hasExternalId) && (acceptsEmail && !hasEmail)) {
     return failImport(
-      'CSV header must include at least one identity column: external_id or email',
+      'CSV header must include at least one active identity column: employeeId or email',
       {
         import_id: importId,
-        error: 'CSV must include at least one of: external_id, email',
+        error: 'CSV must include at least one of the active identity fields: employeeId, email',
       },
       400
     );
@@ -302,11 +382,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const lineNumber = i + 2; // 1-based line number, accounting for header
     const fields = rawRows[i];
 
-    const firstName = getField(fields, 'first_name');
-    const lastName = getField(fields, 'last_name');
-    const externalId = getField(fields, 'external_id');
-    const email = getField(fields, 'email');
-    const rawEffectiveFrom = getField(fields, 'effective_from');
+    const firstName = getEligibilityField(fields, headers, 'firstName');
+    const lastName = getEligibilityField(fields, headers, 'lastName');
+    const externalId = acceptsEmployeeId ? getEligibilityField(fields, headers, 'employeeId') : null;
+    const email = acceptsEmail ? getEligibilityField(fields, headers, 'email') : null;
+    const rawEffectiveFrom =
+      getEligibilityField(fields, headers, 'effectiveFrom') || getField(fields, 'effective_from');
+    const department = getEligibilityField(fields, headers, 'department');
+    const allowanceGroup = getEligibilityField(fields, headers, 'allowanceGroup');
+    const location = getEligibilityField(fields, headers, 'location');
+    const eligibilityStatus = getEligibilityField(fields, headers, 'eligibilityStatus');
+    const hireDate = getEligibilityField(fields, headers, 'hireDate');
+    const companyIdValue = getEligibilityField(fields, headers, 'companyId') || programId;
+    const notes = getEligibilityField(fields, headers, 'notes');
 
     if (!firstName) {
       errors.push({ line: lineNumber, error: 'first_name is required' });
@@ -318,8 +406,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Identity constraint: at least one anchor must be nonblank
-    if (!externalId && !email) {
-      errors.push({ line: lineNumber, error: 'external_id or email (or both) must be provided' });
+    if ((!acceptsEmployeeId || !externalId) && (!acceptsEmail || !email)) {
+      errors.push({ line: lineNumber, error: 'employeeId or email (or both) must be provided' });
       continue;
     }
 
@@ -343,9 +431,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       employee_last_name: lastName,
       employee_external_id: externalId,
       employee_email: email ? email.toLowerCase() : null,
-      cost_center_code: getField(fields, 'cost_center'),
-      coverage_tier: getField(fields, 'coverage_tier'),
+      cost_center_code: department || getField(fields, 'cost_center'),
+      coverage_tier: allowanceGroup || getField(fields, 'coverage_tier'),
+      status: normalizeEnrollmentStatus(eligibilityStatus),
       effective_from: effectiveFrom,
+      metadata: {
+        company_id: companyIdValue,
+        department,
+        location,
+        eligibility_status: eligibilityStatus ? eligibilityStatus.toLowerCase() : null,
+        hire_date: hireDate,
+        allowance_group: allowanceGroup,
+        notes,
+      },
     });
   }
 
@@ -396,9 +494,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     employee_email: row.employee_email,
     cost_center_code: row.cost_center_code,
     coverage_tier: row.coverage_tier,
-    status: 'active' as const,
+    status: row.status,
     effective_from: row.effective_from,
     enrolled_by: employee.id,
+    metadata: row.metadata,
   }));
 
   const { error: insertError } = await serviceClient

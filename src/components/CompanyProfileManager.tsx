@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { EUPackage, EUPackageAddOnKey, PriceAdjustment, ServiceTier } from '@/lib/pricing';
+import { normalizeEuPackageLabel, normalizeServiceTierLabel } from '@/lib/ordering-domain';
+import type { EUPackageAddOnKey, PaymentTerms, PriceAdjustment, ServiceTier } from '@/lib/pricing';
 import {
   calculateEuPackagePerEmployee,
   calculateServiceTierPerEmployee,
@@ -10,10 +11,25 @@ import {
   PRICING,
   safeParsePriceAdjustments,
 } from '@/lib/pricing';
+import {
+  EU_PACKAGE_FORM_OPTIONS,
+  LIGHT_REACTIVE_OPTIONS,
+  NET_TERM_OPTIONS,
+  normalizeInvoiceTerms,
+  normalizeProgramType,
+  parseCompanyGuidelines,
+  PROGRAM_TYPE_OPTIONS,
+  SERVICE_TIER_FORM_OPTIONS,
+  serializeCompanyGuidelines,
+  SUNGLASSES_OPTIONS,
+  type LightReactivePolicy,
+  type SunglassesPolicy,
+} from '@/lib/program-options';
 
 type Props = {
   id: string;
   company_name: string;
+  company_code?: string | null;
   contact_name: string | null;
   contact_email: string | null;
   contact_phone: string | null;
@@ -25,15 +41,23 @@ type Props = {
   restricted_guidelines: string | null;
   loyalty_credit_count: number | null;
   referral_credit_count: number | null;
-  eu_package: EUPackage | null;
+  eu_package: string | null;
   eu_package_add_ons: EUPackageAddOnKey[] | null;
   eu_package_custom_adjustments: PriceAdjustment[] | null;
   service_tier: ServiceTier | null;
   service_tier_custom_adjustments: PriceAdjustment[] | null;
+  eligibility_fields: Array<{
+    key: string;
+    label: string;
+    required: boolean;
+    active: boolean;
+    fieldType: string;
+    description?: string;
+    example?: string;
+    displayOrder: number;
+  }>;
 };
 
-const EU_PACKAGES: EUPackage[] = ['Compliance', 'Comfort', 'Complete', 'Covered'];
-const SERVICE_TIERS: ServiceTier[] = ['Essential', 'Access', 'Premier', 'Enterprise'];
 const ADD_ON_KEYS = Object.keys(EU_PACKAGE_ADD_ON_LABELS) as EUPackageAddOnKey[];
 const inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900';
 const labelClass = 'mb-1 block text-xs font-medium text-gray-600';
@@ -55,6 +79,9 @@ export default function CompanyProfileManager(props: Props) {
   const [importMonth, setImportMonth] = useState(firstDayOfCurrentMonth());
   const [eligibilityMessage, setEligibilityMessage] = useState('');
   const [checkingEligibility, setCheckingEligibility] = useState(false);
+  const [eligibilityFields, setEligibilityFields] = useState(
+    [...props.eligibility_fields].sort((left, right) => left.displayOrder - right.displayOrder)
+  );
   const [eligibilityInput, setEligibilityInput] = useState({
     first_name: '',
     last_name: '',
@@ -62,23 +89,27 @@ export default function CompanyProfileManager(props: Props) {
     employee_external_id: '',
   });
 
+  const parsedGuidelines = parseCompanyGuidelines(props.restricted_guidelines);
+
   const [form, setForm] = useState({
     company_name: props.company_name,
+    company_code: props.company_code || '',
     contact_name: props.contact_name || '',
     contact_email: props.contact_email || '',
     contact_phone: props.contact_phone || '',
-    invoice_terms: props.invoice_terms || '',
+    invoice_terms: normalizeInvoiceTerms(props.invoice_terms),
     approval_required: props.approval_required,
-    approver_emails: (props.approver_emails || []).join(', '),
-    program_type: props.program_type || '',
+    supervisor_emails: props.approver_emails?.length ? props.approver_emails : [''],
+    program_type: normalizeProgramType(props.program_type),
     employee_count: props.employee_count || 0,
-    restricted_guidelines: props.restricted_guidelines || '',
+    light_reactive_policy: parsedGuidelines.lightReactive as LightReactivePolicy,
+    sunglasses_policy: parsedGuidelines.sunglasses as SunglassesPolicy,
     loyalty_credit_count: props.loyalty_credit_count || 0,
     referral_credit_count: props.referral_credit_count || 0,
-    eu_package: props.eu_package || ('Compliance' as EUPackage),
+    eu_package: normalizeEuPackageLabel(props.eu_package) || 'Compliance',
     eu_package_add_ons: props.eu_package_add_ons || [],
     eu_package_custom_adjustments: props.eu_package_custom_adjustments || [],
-    service_tier: props.service_tier || ('Essential' as ServiceTier),
+    service_tier: normalizeServiceTierLabel(props.service_tier) || ('Essential' as ServiceTier),
     service_tier_custom_adjustments: props.service_tier_custom_adjustments || [],
   });
 
@@ -91,9 +122,26 @@ export default function CompanyProfileManager(props: Props) {
     [form.service_tier, form.service_tier_custom_adjustments]
   );
   const totalPerEmployee = euPerEmployee + servicePerEmployee;
+  const acceptsEmployeeId = eligibilityFields.some((field) => field.active && field.key === 'employeeId');
+  const acceptsEmail = eligibilityFields.some((field) => field.active && field.key === 'email');
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function updateSupervisorEmail(index: number, value: string) {
+    const next = [...form.supervisor_emails];
+    next[index] = value;
+    update('supervisor_emails', next);
+  }
+
+  function addSupervisorEmail() {
+    update('supervisor_emails', [...form.supervisor_emails, '']);
+  }
+
+  function removeSupervisorEmail(index: number) {
+    const next = form.supervisor_emails.filter((_, currentIndex) => currentIndex !== index);
+    update('supervisor_emails', next.length > 0 ? next : ['']);
   }
 
   function toggleAddOn(addOnKey: EUPackageAddOnKey) {
@@ -117,10 +165,26 @@ export default function CompanyProfileManager(props: Props) {
     update(key, [...form[key], { label: '', amount: 0 }]);
   }
 
+  function updateEligibilityField(
+    key: string,
+    patch: Partial<(typeof eligibilityFields)[number]>
+  ) {
+    setEligibilityFields((current) =>
+      current.map((field) => {
+        if (field.key !== key) return field;
+        const next = { ...field, ...patch };
+        if (field.key === 'firstName' || field.key === 'lastName') {
+          return { ...next, active: true, required: true };
+        }
+        return next;
+      })
+    );
+  }
+
   function removeAdjustment(key: 'eu_package_custom_adjustments' | 'service_tier_custom_adjustments', index: number) {
     update(
       key,
-      form[key].filter((_, i) => i !== index)
+      form[key].filter((_, adjustmentIndex) => adjustmentIndex !== index)
     );
   }
 
@@ -132,18 +196,20 @@ export default function CompanyProfileManager(props: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         company_name: form.company_name,
+        company_code: form.company_code || null,
         contact_name: form.contact_name || null,
         contact_email: form.contact_email || null,
         contact_phone: form.contact_phone || null,
-        invoice_terms: form.invoice_terms || null,
+        invoice_terms: form.invoice_terms,
         approval_required: form.approval_required,
-        approver_emails: form.approver_emails
-          .split(',')
-          .map((email) => email.trim())
-          .filter(Boolean),
-        program_type: form.program_type || null,
+        approver_emails: form.supervisor_emails.map((email) => email.trim()).filter(Boolean),
+        program_type: form.program_type,
         employee_count: form.employee_count,
-        restricted_guidelines: form.restricted_guidelines || null,
+        restricted_guidelines:
+          serializeCompanyGuidelines({
+            lightReactive: form.light_reactive_policy,
+            sunglasses: form.sunglasses_policy,
+          }) || null,
         loyalty_credit_count: form.loyalty_credit_count,
         referral_credit_count: form.referral_credit_count,
         eu_package: form.eu_package,
@@ -151,6 +217,11 @@ export default function CompanyProfileManager(props: Props) {
         eu_package_custom_adjustments: safeParsePriceAdjustments(form.eu_package_custom_adjustments),
         service_tier: form.service_tier,
         service_tier_custom_adjustments: safeParsePriceAdjustments(form.service_tier_custom_adjustments),
+        eligibility_fields: eligibilityFields.map((field) => ({
+          key: field.key,
+          required: field.required,
+          active: field.active,
+        })),
       }),
     });
     setSaving(false);
@@ -209,8 +280,8 @@ export default function CompanyProfileManager(props: Props) {
       setEligibilityMessage('First name and last name are required.');
       return;
     }
-    if (!eligibilityInput.employee_external_id && !eligibilityInput.employee_email) {
-      setEligibilityMessage('Provide employee ID or employee email.');
+    if ((!acceptsEmployeeId || !eligibilityInput.employee_external_id) && (!acceptsEmail || !eligibilityInput.employee_email)) {
+      setEligibilityMessage('Provide at least one active identity field.');
       return;
     }
 
@@ -247,32 +318,44 @@ export default function CompanyProfileManager(props: Props) {
           <input className={inputClass} value={form.company_name} onChange={(e) => update('company_name', e.target.value)} />
         </div>
         <div>
-          <label className={labelClass}>Program Type</label>
-          <input className={inputClass} value={form.program_type} onChange={(e) => update('program_type', e.target.value)} />
+          <label className={labelClass}>Company Code</label>
+          <input className={inputClass} value={form.company_code} onChange={(e) => update('company_code', e.target.value)} />
         </div>
         <div>
-          <label className={labelClass}>POC Name</label>
+          <label className={labelClass}>Program Type</label>
+          <select className={inputClass} value={form.program_type} onChange={(e) => update('program_type', e.target.value as typeof form.program_type)}>
+            {PROGRAM_TYPE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelClass}>Point of Contact Name</label>
           <input className={inputClass} value={form.contact_name} onChange={(e) => update('contact_name', e.target.value)} />
         </div>
         <div>
-          <label className={labelClass}>POC Email</label>
+          <label className={labelClass}>Point of Contact Email</label>
           <input className={inputClass} value={form.contact_email} onChange={(e) => update('contact_email', e.target.value)} />
         </div>
         <div>
-          <label className={labelClass}>POC Phone</label>
+          <label className={labelClass}>Point of Contact Phone</label>
           <input className={inputClass} value={form.contact_phone} onChange={(e) => update('contact_phone', e.target.value)} />
         </div>
         <div>
-          <label className={labelClass}>Invoice Terms</label>
-          <input className={inputClass} value={form.invoice_terms} onChange={(e) => update('invoice_terms', e.target.value)} />
+          <label className={labelClass}>Net Terms</label>
+          <select className={inputClass} value={form.invoice_terms} onChange={(e) => update('invoice_terms', e.target.value as PaymentTerms)}>
+            {NET_TERM_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className={labelClass}>Employee Count</label>
           <input type="number" min="0" className={inputClass} value={form.employee_count} onChange={(e) => update('employee_count', Number(e.target.value) || 0)} />
-        </div>
-        <div>
-          <label className={labelClass}>Approver Emails (comma-separated)</label>
-          <input className={inputClass} value={form.approver_emails} onChange={(e) => update('approver_emails', e.target.value)} />
         </div>
       </div>
 
@@ -280,8 +363,8 @@ export default function CompanyProfileManager(props: Props) {
         <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
             <label className={labelClass}>EU Package</label>
-            <select value={form.eu_package} onChange={(e) => update('eu_package', e.target.value as EUPackage)} className={inputClass}>
-              {EU_PACKAGES.map((euPackage) => (
+            <select value={form.eu_package} onChange={(e) => update('eu_package', e.target.value as typeof form.eu_package)} className={inputClass}>
+              {EU_PACKAGE_FORM_OPTIONS.map((euPackage) => (
                 <option key={euPackage} value={euPackage}>
                   {euPackage} (${PRICING.euAllowancePerEmployee[euPackage]} / employee)
                 </option>
@@ -291,7 +374,7 @@ export default function CompanyProfileManager(props: Props) {
           <div>
             <label className={labelClass}>Service Tier</label>
             <select value={form.service_tier} onChange={(e) => update('service_tier', e.target.value as ServiceTier)} className={inputClass}>
-              {SERVICE_TIERS.map((tier) => (
+              {SERVICE_TIER_FORM_OPTIONS.map((tier) => (
                 <option key={tier} value={tier}>
                   {tier} (${PRICING.serviceFeePerEmployee[tier]} / employee)
                 </option>
@@ -340,12 +423,57 @@ export default function CompanyProfileManager(props: Props) {
           <button type="button" onClick={() => addAdjustment('service_tier_custom_adjustments')} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-white">+ Add Tier Adjustment</button>
         </div>
 
-        <p className="mt-4 text-sm text-gray-700">Calculated per-employee price: ${(totalPerEmployee).toFixed(2)}</p>
+        <p className="mt-4 text-sm text-gray-700">Calculated per-employee price: ${totalPerEmployee.toFixed(2)}</p>
       </div>
 
-      <div>
-        <label className={labelClass}>Company Guidelines</label>
-        <textarea rows={3} className={inputClass} value={form.restricted_guidelines} onChange={(e) => update('restricted_guidelines', e.target.value)} />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <label className={labelClass}>Supervisor Email</label>
+          <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+            {form.supervisor_emails.map((email, index) => (
+              <div key={`supervisor-${index}`} className="flex gap-2">
+                <input
+                  type="email"
+                  className={inputClass}
+                  value={email}
+                  placeholder={`Supervisor email ${index + 1}`}
+                  onChange={(e) => updateSupervisorEmail(index, e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="rounded-lg border border-red-200 px-3 text-sm text-red-600 hover:bg-red-50"
+                  onClick={() => removeSupervisorEmail(index)}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button type="button" onClick={addSupervisorEmail} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-white">+ Add Supervisor</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label className={labelClass}>Company Guidelines: Light Reactive</label>
+          <select value={form.light_reactive_policy} onChange={(e) => update('light_reactive_policy', e.target.value as LightReactivePolicy)} className={inputClass}>
+            {LIGHT_REACTIVE_OPTIONS.map((option) => (
+              <option key={option.value || 'blank'} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelClass}>Company Guidelines: Sun Glasses</label>
+          <select value={form.sunglasses_policy} onChange={(e) => update('sunglasses_policy', e.target.value as SunglassesPolicy)} className={inputClass}>
+            {SUNGLASSES_OPTIONS.map((option) => (
+              <option key={option.value || 'blank'} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -361,8 +489,48 @@ export default function CompanyProfileManager(props: Props) {
 
       <label className="flex items-center gap-2 text-sm text-gray-700">
         <input type="checkbox" checked={form.approval_required} onChange={(e) => update('approval_required', e.target.checked)} />
-        Require approvals for company orders
+        Require supervisor approval for company orders
       </label>
+
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+        <h4 className="text-sm font-semibold text-gray-700">Employer Eligibility Fields</h4>
+        <p className="mt-1 text-sm text-gray-600">
+          Keep the required roster fields narrow. First name and last name stay required; employee ID or email should remain active for matching.
+        </p>
+        <div className="mt-3 space-y-2">
+          {eligibilityFields.map((field) => (
+            <div key={field.key} className="rounded-lg border border-gray-200 bg-white p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{field.label}</p>
+                  {field.description && <p className="mt-1 text-xs text-gray-500">{field.description}</p>}
+                  {field.example && <p className="mt-1 text-xs text-gray-400">Example: {field.example}</p>}
+                </div>
+                <div className="flex gap-4 text-sm text-gray-700">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={field.active}
+                      disabled={field.key === 'firstName' || field.key === 'lastName'}
+                      onChange={(e) => updateEligibilityField(field.key, { active: e.target.checked })}
+                    />
+                    Collect
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={field.required}
+                      disabled={field.key === 'firstName' || field.key === 'lastName' || !field.active}
+                      onChange={(e) => updateEligibilityField(field.key, { required: e.target.checked })}
+                    />
+                    Required
+                  </label>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {message && <p className="text-sm text-gray-600">{message}</p>}
 
@@ -399,13 +567,13 @@ export default function CompanyProfileManager(props: Props) {
       <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
         <h4 className="text-sm font-semibold text-gray-700">Eligibility Check</h4>
         <p className="mt-1 text-sm text-gray-600">
-          Validate an employee by first name, last name, and employee ID or email before intake.
+          Validate an employee by first name, last name, and at least one active identity field before intake.
         </p>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <input className={inputClass} placeholder="First name" value={eligibilityInput.first_name} onChange={(e) => setEligibilityInput((prev) => ({ ...prev, first_name: e.target.value }))} />
           <input className={inputClass} placeholder="Last name" value={eligibilityInput.last_name} onChange={(e) => setEligibilityInput((prev) => ({ ...prev, last_name: e.target.value }))} />
-          <input className={inputClass} placeholder="Employee ID / token" value={eligibilityInput.employee_external_id} onChange={(e) => setEligibilityInput((prev) => ({ ...prev, employee_external_id: e.target.value }))} />
-          <input className={inputClass} placeholder="Employee email (optional)" value={eligibilityInput.employee_email} onChange={(e) => setEligibilityInput((prev) => ({ ...prev, employee_email: e.target.value }))} />
+          <input className={inputClass} placeholder={acceptsEmployeeId ? 'Employee ID / token' : 'Employee ID not active for this company'} value={eligibilityInput.employee_external_id} onChange={(e) => setEligibilityInput((prev) => ({ ...prev, employee_external_id: e.target.value }))} disabled={!acceptsEmployeeId} />
+          <input className={inputClass} placeholder={acceptsEmail ? 'Employee email' : 'Employee email not active for this company'} value={eligibilityInput.employee_email} onChange={(e) => setEligibilityInput((prev) => ({ ...prev, employee_email: e.target.value }))} disabled={!acceptsEmail} />
         </div>
         <div className="mt-3 flex items-center gap-2">
           <button onClick={handleEligibilityCheck} disabled={checkingEligibility} className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:opacity-60">

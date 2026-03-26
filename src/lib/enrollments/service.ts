@@ -1,4 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  getEnrollmentEligibilityStatus,
+  getProgramEligibilityIdentityRequirements,
+} from '@/lib/programs/service';
 import type {
   CreateManualProgramEnrollmentInput,
   OrderIntakePreloadContext,
@@ -53,9 +57,18 @@ async function findMostRecentEnrollment(
     customerId?: string | null;
     employeeEmail?: string | null;
     employeeExternalId?: string | null;
+    acceptsEmail?: boolean;
+    acceptsEmployeeId?: boolean;
   }
 ): Promise<ProgramEnrollment | null> {
-  const { programId, customerId, employeeEmail, employeeExternalId } = params;
+  const {
+    programId,
+    customerId,
+    employeeEmail,
+    employeeExternalId,
+    acceptsEmail = true,
+    acceptsEmployeeId = true,
+  } = params;
 
   // Lookup priority is deterministic: customer_id, then email, then external ID.
   // customer_id is considered the strongest identity anchor.
@@ -73,7 +86,7 @@ async function findMostRecentEnrollment(
     if (data) return data as ProgramEnrollment;
   }
 
-  if (employeeEmail) {
+  if (employeeEmail && acceptsEmail) {
     let query = supabase
       .from('program_enrollments')
       .select('*')
@@ -87,7 +100,7 @@ async function findMostRecentEnrollment(
     if (data) return data as ProgramEnrollment;
   }
 
-  if (employeeExternalId) {
+  if (employeeExternalId && acceptsEmployeeId) {
     let query = supabase
       .from('program_enrollments')
       .select('*')
@@ -194,16 +207,27 @@ export async function resolveEnrollmentForOrderIntake(params: {
     resolvedProgramId = customer?.program_id ?? null;
   }
 
+  const identityRequirements = resolvedProgramId
+    ? await getProgramEligibilityIdentityRequirements(supabase, resolvedProgramId)
+    : null;
+
   const enrollment = await findMostRecentEnrollment(supabase, {
     programId: resolvedProgramId,
     customerId,
     employeeEmail: normalizedEmail,
     employeeExternalId: normalizedExternalId,
+    acceptsEmail: identityRequirements?.acceptsEmail ?? true,
+    acceptsEmployeeId: identityRequirements?.acceptsEmployeeId ?? true,
   });
 
   if (enrollment) {
     const program = await getProgramSummaryById(supabase, enrollment.program_id);
-    const active = isEnrollmentActive(enrollment, asOf);
+    const activeByDate = isEnrollmentActive(enrollment, asOf);
+    const eligibilityStatus = getEnrollmentEligibilityStatus(
+      enrollment,
+      activeByDate ? 'active' : 'inactive'
+    );
+    const active = eligibilityStatus === 'eligible';
 
     return {
       customer_id: customerId,

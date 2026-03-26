@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentEmployee } from '@/lib/auth';
+import {
+  getEnrollmentEligibilityStatus,
+  getProgramEligibilityIdentityRequirements,
+} from '@/lib/programs/service';
 import { createServiceClient } from '@/lib/supabase/server';
 
 type EnrollmentCheckRow = {
@@ -12,6 +16,7 @@ type EnrollmentCheckRow = {
   effective_to: string | null;
   status: 'active' | 'terminated' | 'suspended';
   coverage_tier: string | null;
+  metadata: Record<string, unknown> | null;
 };
 
 function normalize(value: string | null): string {
@@ -37,19 +42,26 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const employeeEmail = url.searchParams.get('employee_email');
 
   if (!programId) return NextResponse.json({ error: 'program_id is required' }, { status: 400 });
-  if (!firstName || !lastName) {
+  const serviceClient = createServiceClient();
+  const identityRequirements = await getProgramEligibilityIdentityRequirements(serviceClient, programId);
+
+  if ((identityRequirements.requiresFirstName && !firstName) || (identityRequirements.requiresLastName && !lastName)) {
     return NextResponse.json({ error: 'first_name and last_name are required' }, { status: 400 });
   }
-  if (!employeeExternalId && !employeeEmail) {
-    return NextResponse.json({ error: 'employee_external_id or employee_email is required' }, { status: 400 });
+  if (
+    (!identityRequirements.acceptsEmployeeId || !employeeExternalId) &&
+    (!identityRequirements.acceptsEmail || !employeeEmail)
+  ) {
+    return NextResponse.json(
+      { error: 'Provide at least one active identity field for this company.' },
+      { status: 400 }
+    );
   }
 
-  const serviceClient = createServiceClient();
   const { data, error } = await serviceClient
     .from('program_enrollments')
-    .select('id, employee_first_name, employee_last_name, employee_external_id, employee_email, effective_from, effective_to, status, coverage_tier')
-    .eq('program_id', programId)
-    .eq('status', 'active');
+    .select('id, employee_first_name, employee_last_name, employee_external_id, employee_email, effective_from, effective_to, status, coverage_tier, metadata')
+    .eq('program_id', programId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   const rows = (data || []) as EnrollmentCheckRow[];
@@ -65,8 +77,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       normalize(row.employee_last_name) === normalizedLast;
     if (!nameMatch) return false;
 
-    const idMatch = normalizedExternal && normalize(row.employee_external_id) === normalizedExternal;
-    const emailMatch = normalizedEmail && normalize(row.employee_email) === normalizedEmail;
+    const idMatch =
+      identityRequirements.acceptsEmployeeId &&
+      normalizedExternal &&
+      normalize(row.employee_external_id) === normalizedExternal;
+    const emailMatch =
+      identityRequirements.acceptsEmail &&
+      normalizedEmail &&
+      normalize(row.employee_email) === normalizedEmail;
     if (!idMatch && !emailMatch) return false;
 
     return isEffectiveNow(row.effective_from, row.effective_to);
@@ -77,6 +95,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       {
         eligible: false,
         reason: 'No active enrollment matched this name + identifier combination.',
+      },
+      { status: 200 }
+    );
+  }
+
+  const eligibilityStatus = getEnrollmentEligibilityStatus(
+    match,
+    isEffectiveNow(match.effective_from, match.effective_to) ? 'active' : 'inactive'
+  );
+  if (eligibilityStatus !== 'eligible') {
+    return NextResponse.json(
+      {
+        eligible: false,
+        reason:
+          eligibilityStatus === 'pending'
+            ? 'Matched roster row is pending review.'
+            : 'Matched roster row is not currently eligible.',
       },
       { status: 200 }
     );
