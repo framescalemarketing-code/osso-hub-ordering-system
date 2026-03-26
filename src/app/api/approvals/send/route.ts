@@ -1,6 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
-import { integrations } from '@/lib/integrations/config';
+import { integrations, notifications } from '@/lib/integrations/config';
 
 // Send approval request emails
 export async function POST(request: NextRequest) {
@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
 
   if (!integrations.resend.enabled()) {
     return NextResponse.json({ message: 'Email not configured, approvals created but not emailed' });
+  }
+  if (!notifications.enabled()) {
+    return NextResponse.json({ message: notifications.pausedReason() });
   }
 
   const { Resend } = await import('resend');

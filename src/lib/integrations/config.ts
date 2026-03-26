@@ -1,4 +1,9 @@
 // Integration configuration — checks which integrations are enabled
+function hasEnabledFlag(value: string | undefined): boolean {
+  if (!value) return false;
+  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
+}
+
 export const integrations = {
   clickup: {
     enabled: () => !!process.env.CLICKUP_API_KEY && !!process.env.CLICKUP_LIST_ID,
@@ -42,4 +47,10 @@ export const integrations = {
     apiKey: () => process.env.RESEND_API_KEY!,
     from: () => process.env.EMAIL_FROM || 'orders@osso.com',
   },
+};
+
+export const notifications = {
+  enabled: () => hasEnabledFlag(process.env.ENABLE_EXTERNAL_NOTIFICATIONS),
+  pausedReason: () =>
+    'Outbound notifications are paused in this environment. Set ENABLE_EXTERNAL_NOTIFICATIONS=true to resume.',
 };

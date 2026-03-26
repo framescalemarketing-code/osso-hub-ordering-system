@@ -1,5 +1,5 @@
 import { getCurrentEmployee } from '@/lib/auth';
-import { integrations } from '@/lib/integrations/config';
+import { integrations, notifications } from '@/lib/integrations/config';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import RoleAccessManager from '@/components/RoleAccessManager';
@@ -13,15 +13,19 @@ export default async function SettingsPage() {
   }
 
   const checks = [
-    { name: 'Supabase', connected: !!process.env.NEXT_PUBLIC_SUPABASE_URL },
-    { name: 'ClickUp', connected: integrations.clickup.enabled() },
-    { name: 'NetSuite', connected: integrations.netsuite.enabled() },
-    { name: 'QuickBooks', connected: integrations.quickbooks.enabled() },
-    { name: 'Mailchimp', connected: integrations.mailchimp.enabled() },
-    { name: 'BigQuery', connected: integrations.bigquery.enabled() },
-    { name: 'Nassau Lens', connected: integrations.nassau.enabled() },
-    { name: 'ABB Optical', connected: integrations.abb_optical.enabled() },
-    { name: 'Email (Resend)', connected: integrations.resend.enabled() },
+    { name: 'Supabase', connected: !!process.env.NEXT_PUBLIC_SUPABASE_URL, status: 'Connected' },
+    { name: 'ClickUp', connected: integrations.clickup.enabled(), status: integrations.clickup.enabled() ? 'Connected' : 'Not configured' },
+    { name: 'NetSuite', connected: integrations.netsuite.enabled(), status: integrations.netsuite.enabled() ? 'Connected' : 'Not configured' },
+    { name: 'QuickBooks', connected: integrations.quickbooks.enabled(), status: integrations.quickbooks.enabled() ? 'Connected' : 'Not configured' },
+    { name: 'Mailchimp', connected: integrations.mailchimp.enabled(), status: integrations.mailchimp.enabled() ? 'Connected' : 'Not configured' },
+    { name: 'BigQuery', connected: integrations.bigquery.enabled(), status: integrations.bigquery.enabled() ? 'Connected' : 'Not configured' },
+    { name: 'Nassau Lens', connected: integrations.nassau.enabled(), status: integrations.nassau.enabled() ? 'Connected' : 'Not configured' },
+    { name: 'ABB Optical', connected: integrations.abb_optical.enabled(), status: integrations.abb_optical.enabled() ? 'Connected' : 'Not configured' },
+    {
+      name: 'Email (Resend)',
+      connected: integrations.resend.enabled() && notifications.enabled(),
+      status: !integrations.resend.enabled() ? 'Not configured' : notifications.enabled() ? 'Connected' : 'Paused',
+    },
   ];
 
   return (
@@ -36,7 +40,7 @@ export default async function SettingsPage() {
               <span className={`w-3 h-3 rounded-full ${c.connected ? 'bg-green-500' : 'bg-gray-400'}`} />
               <span className="text-sm font-semibold text-[#2f2416]">{c.name}</span>
               <span className={`text-xs ml-auto ${c.connected ? 'text-emerald-700' : 'text-[#9f8968]'}`}>
-                {c.connected ? 'Connected' : 'Not configured'}
+                {c.status}
               </span>
             </div>
           ))}
@@ -44,6 +48,11 @@ export default async function SettingsPage() {
         <p className="mt-4 text-xs text-[#7b6340]">
           Add API keys to your .env.local file to enable integrations. See .env.example for all available keys.
         </p>
+        {!notifications.enabled() && (
+          <p className="mt-2 text-xs text-[#7b6340]">
+            Outbound notifications stay paused until <code>ENABLE_EXTERNAL_NOTIFICATIONS=true</code>.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2">

@@ -43,6 +43,7 @@ npm run dev
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SECRET_KEY`
 - `JOB_RUNNER_SECRET` (used to secure `/api/jobs/process` and `/api/reminders/process`)
+- `ENABLE_EXTERNAL_NOTIFICATIONS` (`false` keeps outbound emails paused until you intentionally re-enable them)
 
 ## BigQuery
 
@@ -84,19 +85,21 @@ Order integrations are enqueued in `integration_jobs` and processed by `/api/job
 
 ## Scheduler / server readiness
 
-`vercel.json` includes cron jobs:
+Scheduled Vercel cron jobs are currently paused for development in `vercel.json`.
+
+When you are ready to resume them:
 - `0 9 * * *` -> `/api/jobs/process`
 - `30 9 * * *` -> `/api/reminders/process`
 
-Set `CRON_SECRET` in Vercel and keep `JOB_RUNNER_SECRET` aligned so cron calls are authorized.
+Set `CRON_SECRET` in Vercel, restore the cron entries in `vercel.json`, and keep `JOB_RUNNER_SECRET` aligned so cron calls are authorized.
 
 ## Quality automation
 
 - GitHub Actions CI (`.github/workflows/ci.yml`): push/PR validation with cached install, lint, typecheck, and build
-- Daily Health (`.github/workflows/daily-health.yml`): daily smoke test plus an issue when the scheduled run fails
-- Security (`.github/workflows/security.yml`): CodeQL, dependency review, and npm audit
-- Autofix (`.github/workflows/autofix.yml`): daily conservative PRs for lint fixes and lockfile maintenance
-- Dependabot (`.github/dependabot.yml`): daily npm updates and weekly GitHub Actions updates
+- Daily Health (`.github/workflows/daily-health.yml`): manual-only while development notifications are paused
+- Security (`.github/workflows/security.yml`): push/PR validation plus manual runs
+- Autofix (`.github/workflows/autofix.yml`): manual-only while development notifications are paused
+- Dependabot (`.github/dependabot.disabled.yml`): disabled backup of the previous daily/weekly update schedule
 
 ## Branching model
 

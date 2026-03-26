@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
-import { integrations } from '@/lib/integrations/config';
+import { integrations, notifications } from '@/lib/integrations/config';
 import { claimDueReminders, runWithConcurrencyLimit } from '@/lib/integrations/job-runner';
 
 function isAuthorized(request: NextRequest): boolean {
@@ -27,6 +27,15 @@ export async function POST(request: NextRequest) {
   const supabase = createServiceClient();
   if (!integrations.resend.enabled()) {
     return NextResponse.json({ error: 'Email not configured' }, { status: 500 });
+  }
+  if (!notifications.enabled()) {
+    return NextResponse.json({
+      processed: 0,
+      claimed: 0,
+      failed: 0,
+      skipped: true,
+      message: notifications.pausedReason(),
+    });
   }
 
   const { Resend } = await import('resend');

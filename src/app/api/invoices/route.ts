@@ -1,6 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceClient } from '@/lib/supabase/server';
-import { integrations } from '@/lib/integrations/config';
+import { integrations, notifications } from '@/lib/integrations/config';
 import type { Customer, Order, OrderItem, Program } from '@/lib/types';
 
 type InvoiceOrder = Order & {
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Send via Resend
-  if (integrations.resend.enabled()) {
+  if (integrations.resend.enabled() && notifications.enabled()) {
     const { Resend } = await import('resend');
     const resend = new Resend(integrations.resend.apiKey());
 
