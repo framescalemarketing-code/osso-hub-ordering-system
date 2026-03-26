@@ -44,7 +44,10 @@ function ensureBranchExists(branch) {
 
 function applyProtection(branch) {
   const payload = {
-    required_status_checks: null,
+    required_status_checks: {
+      strict: true,
+      contexts: ["validate", "CodeQL"],
+    },
     enforce_admins: true,
     required_pull_request_reviews: {
       dismiss_stale_reviews: false,

@@ -4,11 +4,23 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getCurrentEmployee } from '@/lib/auth';
 import type { Address, Customer, Order, Prescription, Program } from '@/lib/types';
 import CustomerProfileManager from '@/components/CustomerProfileManager';
+import { formatInvoiceTerms } from '@/lib/program-options';
 
 type CustomerDetail = Customer & {
   program?: Pick<
     Program,
-    'id' | 'company_name' | 'approval_required' | 'invoice_terms' | 'notes' | 'billing_address' | 'shipping_address' | 'program_type'
+    | 'id'
+    | 'company_name'
+    | 'company_code'
+    | 'approval_required'
+    | 'invoice_terms'
+    | 'notes'
+    | 'restricted_guidelines'
+    | 'billing_address'
+    | 'shipping_address'
+    | 'program_type'
+    | 'contact_name'
+    | 'contact_email'
   > | null;
   orders?: Array<
     Pick<
@@ -56,7 +68,7 @@ export default async function CustomerProfilePage({ params }: CustomerProfilePag
   const { data: customer } = await supabase
     .from('customers')
     .select(
-      '*, program:programs(id, company_name, approval_required, invoice_terms, notes, billing_address, shipping_address, program_type), orders:orders(id, order_number, order_type, status, total, created_at, internal_notes, customer_notes, program:programs(company_name)), prescriptions:prescriptions(*)'
+      '*, program:programs(id, company_name, company_code, approval_required, invoice_terms, notes, restricted_guidelines, billing_address, shipping_address, program_type, contact_name, contact_email), orders:orders(id, order_number, order_type, status, total, created_at, internal_notes, customer_notes, program:programs(company_name)), prescriptions:prescriptions(*)'
     )
     .eq('id', id)
     .single();
@@ -260,12 +272,26 @@ export default async function CustomerProfilePage({ params }: CustomerProfilePag
                   <p className="font-medium text-gray-900">{typedCustomer.program.company_name}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Invoice Terms</p>
-                  <p className="font-medium text-gray-900">{typedCustomer.program.invoice_terms || '-'}</p>
+                  <p className="text-gray-500">Company Code</p>
+                  <p className="font-medium text-gray-900">{typedCustomer.program.company_code || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Restricted Guidelines</p>
-                  <p className="font-medium text-gray-900">{typedCustomer.program.notes || 'Not specified'}</p>
+                  <p className="text-gray-500">Point of Contact</p>
+                  <p className="font-medium text-gray-900">{typedCustomer.program.contact_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Point of Contact Email</p>
+                  <p className="font-medium text-gray-900">{typedCustomer.program.contact_email || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Net Terms</p>
+                  <p className="font-medium text-gray-900">{formatInvoiceTerms(typedCustomer.program.invoice_terms)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Company Guidelines</p>
+                  <p className="whitespace-pre-line font-medium text-gray-900">
+                    {typedCustomer.program.restricted_guidelines || typedCustomer.program.notes || 'Not specified'}
+                  </p>
                 </div>
               </div>
             </div>

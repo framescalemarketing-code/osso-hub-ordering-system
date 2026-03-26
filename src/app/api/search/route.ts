@@ -24,8 +24,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .limit(8),
     serviceClient
       .from('programs')
-      .select('id, company_name, contact_name, contact_email')
-      .or(`company_name.ilike.%${query}%,contact_name.ilike.%${query}%,contact_email.ilike.%${query}%`)
+      .select('id, company_name, company_code, contact_name, contact_email')
+      .or(`company_name.ilike.%${query}%,company_code.ilike.%${query}%,contact_name.ilike.%${query}%,contact_email.ilike.%${query}%`)
       .eq('is_active', true)
       .limit(8),
     serviceClient

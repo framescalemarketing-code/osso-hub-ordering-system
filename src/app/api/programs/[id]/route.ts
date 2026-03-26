@@ -1,36 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentEmployee } from '@/lib/auth';
+import {
+  normalizeProgramMutationInput,
+  syncCanonicalProgramFoundation,
+  type ProgramMutationInput,
+} from '@/lib/programs/service';
+import type { EUPackageAddOnKey } from '@/lib/pricing';
 import { createServiceClient } from '@/lib/supabase/server';
-import { safeParsePriceAdjustments, type EUPackage, type EUPackageAddOnKey, type ServiceTier } from '@/lib/pricing';
 
-type ProgramPatchPayload = {
-  company_name?: string;
-  contact_name?: string | null;
-  contact_email?: string | null;
-  contact_phone?: string | null;
-  invoice_terms?: string | null;
-  approval_required?: boolean;
-  approver_emails?: string[];
-  program_type?: string | null;
-  employee_count?: number | null;
-  restricted_guidelines?: string | null;
-  loyalty_credit_count?: number | null;
-  referral_credit_count?: number | null;
-  eu_package?: EUPackage | null;
-  eu_package_add_ons?: EUPackageAddOnKey[];
-  eu_package_custom_adjustments?: unknown;
-  service_tier?: ServiceTier | null;
-  service_tier_custom_adjustments?: unknown;
-};
-
-function normalizeText(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null;
-  const normalized = value.trim();
-  return normalized ? normalized : null;
-}
-
-function isCompanyManager(role?: string | null): boolean {
-  return ['admin', 'manager'].includes(role || '');
+function canManageCompanies(role?: string | null): boolean {
+  return ['admin', 'manager', 'sales', 'optician'].includes(role || '');
 }
 
 export async function PATCH(
@@ -39,42 +18,20 @@ export async function PATCH(
 ): Promise<NextResponse> {
   const employee = await getCurrentEmployee();
   if (!employee) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!isCompanyManager(employee.role)) {
-    return NextResponse.json({ error: 'Only admin and manager roles can update companies' }, { status: 403 });
+  if (!canManageCompanies(employee.role)) {
+    return NextResponse.json({ error: 'Only company staff roles can update companies' }, { status: 403 });
   }
 
   const { id } = await context.params;
-  let body: ProgramPatchPayload;
+  let body: ProgramMutationInput;
   try {
-    body = (await request.json()) as ProgramPatchPayload;
+    body = (await request.json()) as ProgramMutationInput;
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const patch: Record<string, unknown> = {};
-  if (typeof body.company_name === 'string') patch.company_name = body.company_name.trim();
-  if ('contact_name' in body) patch.contact_name = normalizeText(body.contact_name);
-  if ('contact_email' in body) patch.contact_email = normalizeText(body.contact_email);
-  if ('contact_phone' in body) patch.contact_phone = normalizeText(body.contact_phone);
-  if ('invoice_terms' in body) patch.invoice_terms = normalizeText(body.invoice_terms);
-  if (typeof body.approval_required === 'boolean') patch.approval_required = body.approval_required;
-  if (Array.isArray(body.approver_emails)) {
-    patch.approver_emails = body.approver_emails.map((email) => email.trim()).filter(Boolean);
-  }
-  if ('program_type' in body) patch.program_type = normalizeText(body.program_type);
-  if ('employee_count' in body) patch.employee_count = Number(body.employee_count) || 0;
-  if ('restricted_guidelines' in body) patch.restricted_guidelines = normalizeText(body.restricted_guidelines);
-  if ('loyalty_credit_count' in body) patch.loyalty_credit_count = Number(body.loyalty_credit_count) || 0;
-  if ('referral_credit_count' in body) patch.referral_credit_count = Number(body.referral_credit_count) || 0;
-  if ('eu_package' in body) patch.eu_package = body.eu_package || null;
-  if (Array.isArray(body.eu_package_add_ons)) patch.eu_package_add_ons = body.eu_package_add_ons;
-  if ('eu_package_custom_adjustments' in body) {
-    patch.eu_package_custom_adjustments = safeParsePriceAdjustments(body.eu_package_custom_adjustments);
-  }
-  if ('service_tier' in body) patch.service_tier = body.service_tier || null;
-  if ('service_tier_custom_adjustments' in body) {
-    patch.service_tier_custom_adjustments = safeParsePriceAdjustments(body.service_tier_custom_adjustments);
-  }
+  const normalized = normalizeProgramMutationInput(body);
+  const patch = normalized.programPatch;
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: 'No updatable fields provided' }, { status: 400 });
@@ -85,10 +42,29 @@ export async function PATCH(
     .from('programs')
     .update(patch)
     .eq('id', id)
-    .select('*')
+    .select('id, company_name, company_code, eu_package, eu_package_add_ons, service_tier, is_active')
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  try {
+    await syncCanonicalProgramFoundation({
+      supabase: serviceClient,
+      programId: data.id,
+      companyName: data.company_name,
+      companyCode: data.company_code || null,
+      euPackage: data.eu_package || null,
+      euPackageAddOns: (data.eu_package_add_ons || []) as EUPackageAddOnKey[],
+      serviceTier: data.service_tier || null,
+      isActive: Boolean(data.is_active),
+      eligibilityFields: normalized.eligibilityFields,
+    });
+  } catch (syncError: unknown) {
+    const message =
+      syncError instanceof Error ? syncError.message : 'Failed to sync canonical company program';
+    return NextResponse.json({ error: message, company: data }, { status: 500 });
+  }
+
   return NextResponse.json({ company: data });
 }
 
@@ -98,8 +74,8 @@ export async function DELETE(
 ): Promise<NextResponse> {
   const employee = await getCurrentEmployee();
   if (!employee) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!isCompanyManager(employee.role)) {
-    return NextResponse.json({ error: 'Only admin and manager roles can archive companies' }, { status: 403 });
+  if (!canManageCompanies(employee.role)) {
+    return NextResponse.json({ error: 'Only company staff roles can archive companies' }, { status: 403 });
   }
 
   const { id } = await context.params;
@@ -110,5 +86,33 @@ export async function DELETE(
     .eq('id', id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  const { data: program, error: programError } = await serviceClient
+    .from('programs')
+    .select('id, company_name, company_code, eu_package, eu_package_add_ons, service_tier, is_active')
+    .eq('id', id)
+    .single();
+
+  if (programError || !program) {
+    return NextResponse.json({ error: programError?.message || 'Failed to reload archived company' }, { status: 400 });
+  }
+
+  try {
+    await syncCanonicalProgramFoundation({
+      supabase: serviceClient,
+      programId: program.id,
+      companyName: program.company_name,
+      companyCode: program.company_code || null,
+      euPackage: program.eu_package || null,
+      euPackageAddOns: (program.eu_package_add_ons || []) as EUPackageAddOnKey[],
+      serviceTier: program.service_tier || null,
+      isActive: Boolean(program.is_active),
+    });
+  } catch (syncError: unknown) {
+    const message =
+      syncError instanceof Error ? syncError.message : 'Failed to sync archived company state';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+
   return NextResponse.json({ success: true });
 }

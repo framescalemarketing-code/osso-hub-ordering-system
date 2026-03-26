@@ -2,11 +2,13 @@ import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getCurrentEmployee } from '@/lib/auth';
 import type { Program } from '@/lib/types';
+import { formatInvoiceTerms } from '@/lib/program-options';
 
 type ProgramListItem = Pick<
   Program,
   | 'id'
   | 'company_name'
+  | 'company_code'
   | 'contact_name'
   | 'contact_email'
   | 'approval_required'
@@ -29,7 +31,7 @@ export default async function CompaniesPage() {
   const [programsRes, enrollmentsRes] = await Promise.all([
     supabase
       .from('programs')
-      .select('id, company_name, contact_name, contact_email, approval_required, invoice_terms, is_active, program_type, employee_count, eu_package, service_tier')
+      .select('id, company_name, company_code, contact_name, contact_email, approval_required, invoice_terms, is_active, program_type, employee_count, eu_package, service_tier')
       .eq('is_active', true)
       .order('company_name'),
     supabase
@@ -64,12 +66,13 @@ export default async function CompaniesPage() {
       </div>
 
       <div className="pos-panel-strong mt-6 overflow-hidden">
-        <div className="hidden gap-4 border-b border-[#e4d4ba] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#7d6541] xl:grid xl:grid-cols-[1.3fr_1fr_1fr_0.9fr_0.9fr_1fr]">
+        <div className="hidden gap-4 border-b border-[#e4d4ba] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#7d6541] xl:grid xl:grid-cols-[1.2fr_0.8fr_1fr_1fr_0.9fr_0.9fr_1fr]">
           <span>Company</span>
-          <span>POC Name</span>
-          <span>POC Email</span>
+          <span>Company Code</span>
+          <span>Point of Contact</span>
+          <span>Point of Contact Email</span>
           <span>EU Package</span>
-          <span>Service Tier</span>
+          <span>Net Terms</span>
           <span>Employee Count</span>
         </div>
 
@@ -83,7 +86,7 @@ export default async function CompaniesPage() {
                 href={`/programs/${program.id}`}
                 className="block border-b border-[#f1e5d3] px-4 py-4 transition hover:bg-[#fffcf7]"
               >
-                <div className="grid gap-4 xl:grid-cols-[1.3fr_1fr_1fr_0.9fr_0.9fr_1fr]">
+                <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr_1fr_1fr_0.9fr_0.9fr_1fr]">
                   <div className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Company</p>
                     <p className="font-semibold text-[#2f2416]">{program.company_name}</p>
@@ -91,12 +94,17 @@ export default async function CompaniesPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">POC Name</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Company Code</p>
+                    <p className="text-[#6f5b40]">{program.company_code || '-'}</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Point of Contact</p>
                     <p className="text-[#6f5b40]">{program.contact_name || '-'}</p>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">POC Email</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Point of Contact Email</p>
                     <p className="break-all text-[#6f5b40]">{program.contact_email || '-'}</p>
                   </div>
 
@@ -106,8 +114,8 @@ export default async function CompaniesPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Service Tier</p>
-                    <p className="text-[#6f5b40]">{program.service_tier || '-'}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Net Terms</p>
+                    <p className="text-[#6f5b40]">{formatInvoiceTerms(program.invoice_terms)}</p>
                   </div>
 
                   <div className="space-y-1">

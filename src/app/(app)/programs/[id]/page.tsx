@@ -2,14 +2,17 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getCurrentEmployee } from '@/lib/auth';
+import { normalizeEuPackageLabel, normalizeServiceTierLabel } from '@/lib/ordering-domain';
 import type { Address, Customer, Order, Program } from '@/lib/types';
 import CompanyProfileManager from '@/components/CompanyProfileManager';
+import { getProgramCanonicalContext } from '@/lib/programs/service';
 import {
   calculateEuPackagePerEmployee,
   calculateServiceTierPerEmployee,
   safeParsePriceAdjustments,
   type EUPackageAddOnKey,
 } from '@/lib/pricing';
+import { formatInvoiceTerms } from '@/lib/program-options';
 
 type ProgramDetail = Program & {
   orders?: Array<
@@ -60,7 +63,7 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
   const { id } = await params;
   const supabase = await createServerSupabaseClient();
   const employee = await getCurrentEmployee();
-  const canManage = ['admin', 'manager'].includes(employee?.role || '');
+  const canManage = ['admin', 'manager', 'sales', 'optician'].includes(employee?.role || '');
 
   const { data: program } = await supabase
     .from('programs')
@@ -73,6 +76,7 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
   const typedProgram = program as ProgramDetail | null;
 
   if (!typedProgram) notFound();
+  const canonicalContext = await getProgramCanonicalContext(supabase, id);
 
   const recentOrders = [...(typedProgram.orders || [])].sort(
     (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
@@ -81,11 +85,13 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
   const primaryAddress = typedProgram.billing_address || typedProgram.shipping_address;
   const parsedEuAdjustments = safeParsePriceAdjustments(typedProgram.eu_package_custom_adjustments);
   const parsedServiceAdjustments = safeParsePriceAdjustments(typedProgram.service_tier_custom_adjustments);
-  const euPerEmployee = typedProgram.eu_package
-    ? calculateEuPackagePerEmployee(typedProgram.eu_package, (typedProgram.eu_package_add_ons || []) as EUPackageAddOnKey[], parsedEuAdjustments)
+  const normalizedEuPackage = normalizeEuPackageLabel(typedProgram.eu_package);
+  const normalizedServiceTier = normalizeServiceTierLabel(typedProgram.service_tier);
+  const euPerEmployee = normalizedEuPackage
+    ? calculateEuPackagePerEmployee(normalizedEuPackage, (typedProgram.eu_package_add_ons || []) as EUPackageAddOnKey[], parsedEuAdjustments)
     : null;
-  const servicePerEmployee = typedProgram.service_tier
-    ? calculateServiceTierPerEmployee(typedProgram.service_tier, parsedServiceAdjustments)
+  const servicePerEmployee = normalizedServiceTier
+    ? calculateServiceTierPerEmployee(normalizedServiceTier, parsedServiceAdjustments)
     : null;
   const totalPerEmployee =
     euPerEmployee !== null && servicePerEmployee !== null ? euPerEmployee + servicePerEmployee : null;
@@ -100,7 +106,7 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-[#2a1f12]">{typedProgram.company_name}</h1>
             <p className="mt-1 text-sm text-[#6f5b40]">
-              {typedProgram.contact_name || 'No contact name'} - {typedProgram.contact_email || 'No contact email'}
+              {typedProgram.company_code || 'No company code'} - {typedProgram.contact_email || 'No contact email'}
             </p>
           </div>
           <div className="rounded-full border border-[#ccb089] bg-[#fff8ec] px-3 py-1.5 text-sm font-semibold text-[#6f522d]">
@@ -114,11 +120,15 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
           <div className="pos-panel p-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
-                <p className="text-sm text-gray-500">POC Name</p>
+                <p className="text-sm text-gray-500">Company Code</p>
+                <p className="font-medium text-gray-900">{typedProgram.company_code || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Point of Contact</p>
                 <p className="font-medium text-gray-900">{typedProgram.contact_name || '-'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">POC Email</p>
+                <p className="text-sm text-gray-500">Point of Contact Email</p>
                 <p className="break-all font-medium text-gray-900">{typedProgram.contact_email || '-'}</p>
               </div>
               <div>
@@ -126,8 +136,8 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
                 <p className="font-medium text-gray-900">{activeMembers.length} active member{activeMembers.length === 1 ? '' : 's'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Invoice Terms</p>
-                <p className="font-medium text-gray-900">{typedProgram.invoice_terms || '-'}</p>
+                <p className="text-sm text-gray-500">Net Terms</p>
+                <p className="font-medium text-gray-900">{formatInvoiceTerms(typedProgram.invoice_terms)}</p>
               </div>
             </div>
           </div>
@@ -224,17 +234,17 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
           </div>
 
           <div className="pos-panel p-6">
-            <h3 className="mb-3 text-sm font-semibold text-gray-500">Restricted Guidelines</h3>
+            <h3 className="mb-3 text-sm font-semibold text-gray-500">Company Guidelines</h3>
             <p className="whitespace-pre-line text-sm text-gray-700">
-              {typedProgram.restricted_guidelines || typedProgram.notes || 'No restricted guidelines recorded yet.'}
+              {typedProgram.restricted_guidelines || typedProgram.notes || 'No company guidelines recorded yet.'}
             </p>
           </div>
 
           <div className="pos-panel p-6">
             <h3 className="mb-3 text-sm font-semibold text-gray-500">EU Package + Service Pricing</h3>
             <div className="space-y-2 text-sm text-gray-700">
-              <p>EU Package: <span className="font-medium">{typedProgram.eu_package || '-'}</span></p>
-              <p>Service Tier: <span className="font-medium">{typedProgram.service_tier || '-'}</span></p>
+              <p>EU Package: <span className="font-medium">{normalizedEuPackage || typedProgram.eu_package || '-'}</span></p>
+              <p>Service Tier: <span className="font-medium">{normalizedServiceTier || typedProgram.service_tier || '-'}</span></p>
               <p>EU allowance per employee: <span className="font-medium">{euPerEmployee !== null ? `$${euPerEmployee.toFixed(2)}` : '-'}</span></p>
               <p>Service fee per employee: <span className="font-medium">{servicePerEmployee !== null ? `$${servicePerEmployee.toFixed(2)}` : '-'}</span></p>
               <p>Total per employee: <span className="font-medium">{totalPerEmployee !== null ? `$${totalPerEmployee.toFixed(2)}` : '-'}</span></p>
@@ -263,8 +273,8 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
                 <p className="font-medium text-gray-900">{typedProgram.approval_required ? 'Yes' : 'No'}</p>
               </div>
               <div>
-                <p className="text-gray-500">Invoice Terms</p>
-                <p className="font-medium text-gray-900">{typedProgram.invoice_terms || '-'}</p>
+                <p className="text-gray-500">Net Terms</p>
+                <p className="font-medium text-gray-900">{formatInvoiceTerms(typedProgram.invoice_terms)}</p>
               </div>
             </div>
           </div>
@@ -273,6 +283,7 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
             <CompanyProfileManager
               id={typedProgram.id}
               company_name={typedProgram.company_name}
+              company_code={typedProgram.company_code || null}
               contact_name={typedProgram.contact_name}
               contact_email={typedProgram.contact_email}
               contact_phone={typedProgram.contact_phone}
@@ -289,6 +300,7 @@ export default async function ProgramDetailPage({ params }: CompanyDetailPagePro
               eu_package_custom_adjustments={parsedEuAdjustments}
               service_tier={typedProgram.service_tier || null}
               service_tier_custom_adjustments={parsedServiceAdjustments}
+              eligibility_fields={canonicalContext.eligibilityFields}
             />
           )}
         </div>

@@ -66,15 +66,14 @@ export default async function CustomersPage() {
       </div>
 
       <div className="pos-panel-strong overflow-hidden">
-        <div className="hidden gap-4 border-b border-[#e4d4ba] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#7d6541] xl:grid xl:grid-cols-[1.3fr_1.2fr_1fr_1.2fr_0.9fr_1fr_1.1fr_1fr]">
+        <div className="hidden gap-4 border-b border-[#e4d4ba] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#7d6541] xl:grid xl:grid-cols-[1.3fr_1.2fr_1fr_1.2fr_1fr_1fr_0.9fr]">
           <span>Name</span>
           <span>Email</span>
           <span>Phone</span>
-          <span>Program</span>
-          <span>DOB</span>
-          <span>Recent Order</span>
           <span>Company</span>
           <span>Program Type</span>
+          <span>Recent Order</span>
+          <span>Created</span>
         </div>
 
         <div>
@@ -88,7 +87,7 @@ export default async function CustomersPage() {
                 href={`/customers/${customer.id}`}
                 className="block border-b border-[#f1e5d3] px-4 py-4 transition hover:bg-[#fffcf7]"
               >
-                <div className="grid gap-4 xl:grid-cols-[1.3fr_1.2fr_1fr_1.2fr_0.9fr_1fr_1.1fr_1fr]">
+                <div className="grid gap-4 xl:grid-cols-[1.3fr_1.2fr_1fr_1.2fr_1fr_1fr_0.9fr]">
                   <div className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Name</p>
                     <p className="font-semibold text-[#2f2416]">
@@ -108,13 +107,13 @@ export default async function CustomersPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Program</p>
-                    <p className="font-semibold text-[#2f2416]">{getProgramLabel(program)}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Company</p>
+                    <p className="font-semibold text-[#2f2416]">{program?.company_name || getProgramLabel(program)}</p>
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">DOB</p>
-                    <p className="text-[#6f5b40]">{canViewSensitive ? formatDate(customer.date_of_birth) : 'Restricted'}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Program Type</p>
+                    <p className="text-[#6f5b40]">{getProgramTypeLabel(program)}</p>
                   </div>
 
                   <div className="space-y-1">
@@ -123,13 +122,8 @@ export default async function CustomersPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Company</p>
-                    <p className="text-[#6f5b40]">{program?.company_name || '-'}</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Program Type</p>
-                    <p className="text-[#6f5b40]">{getProgramTypeLabel(program)}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#9f8968] xl:hidden">Created</p>
+                    <p className="text-[#6f5b40]">{formatDate(customer.created_at)}</p>
                   </div>
                 </div>
               </Link>

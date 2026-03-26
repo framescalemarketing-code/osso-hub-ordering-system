@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import type { EUPackage, EUPackageAddOnKey, PriceAdjustment, ServiceTier } from '@/lib/pricing';
+import type { EUPackageAddOnKey, PaymentTerms, PriceAdjustment, ServiceTier } from '@/lib/pricing';
 import {
   calculateEuPackagePerEmployee,
   calculateServiceTierPerEmployee,
@@ -11,29 +10,42 @@ import {
   PRICING,
   safeParsePriceAdjustments,
 } from '@/lib/pricing';
+import {
+  EU_PACKAGE_FORM_OPTIONS,
+  LIGHT_REACTIVE_OPTIONS,
+  NET_TERM_OPTIONS,
+  normalizeInvoiceTerms,
+  normalizeProgramType,
+  PROGRAM_TYPE_OPTIONS,
+  SERVICE_TIER_FORM_OPTIONS,
+  serializeCompanyGuidelines,
+  SUNGLASSES_OPTIONS,
+  type LightReactivePolicy,
+  type SunglassesPolicy,
+} from '@/lib/program-options';
 
 type ProgramFormState = {
   company_name: string;
+  company_code: string;
   contact_name: string;
   contact_email: string;
   contact_phone: string;
   approval_required: boolean;
-  approver_emails: string;
-  invoice_terms: string;
-  program_type: string;
+  supervisor_emails: string[];
+  invoice_terms: PaymentTerms;
+  program_type: (typeof PROGRAM_TYPE_OPTIONS)[number];
   employee_count: number;
-  restricted_guidelines: string;
+  light_reactive_policy: LightReactivePolicy;
+  sunglasses_policy: SunglassesPolicy;
   loyalty_credit_count: number;
   referral_credit_count: number;
-  eu_package: EUPackage;
+  eu_package: (typeof EU_PACKAGE_FORM_OPTIONS)[number];
   eu_package_add_ons: EUPackageAddOnKey[];
   eu_package_custom_adjustments: PriceAdjustment[];
   service_tier: ServiceTier;
   service_tier_custom_adjustments: PriceAdjustment[];
 };
 
-const EU_PACKAGES: EUPackage[] = ['Compliance', 'Comfort', 'Complete', 'Covered'];
-const SERVICE_TIERS: ServiceTier[] = ['Essential', 'Access', 'Premier', 'Enterprise'];
 const ADD_ON_KEYS = Object.keys(EU_PACKAGE_ADD_ON_LABELS) as EUPackageAddOnKey[];
 
 const inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900';
@@ -50,21 +62,23 @@ type ProgramFormProps = {
 };
 
 export default function ProgramForm({ initiallyOpen = false, showTrigger = true, redirectOnSave }: ProgramFormProps) {
-  const supabase = createClient();
   const router = useRouter();
   const [open, setOpen] = useState(initiallyOpen || !showTrigger);
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
   const [form, setForm] = useState<ProgramFormState>({
     company_name: '',
+    company_code: '',
     contact_name: '',
     contact_email: '',
     contact_phone: '',
     approval_required: true,
-    approver_emails: '',
-    invoice_terms: 'Net 30',
-    program_type: 'Safety Eyewear',
+    supervisor_emails: [''],
+    invoice_terms: normalizeInvoiceTerms('NET30'),
+    program_type: normalizeProgramType('prescription safety eyewear'),
     employee_count: 0,
-    restricted_guidelines: '',
+    light_reactive_policy: '',
+    sunglasses_policy: '',
     loyalty_credit_count: 0,
     referral_credit_count: 0,
     eu_package: 'Compliance',
@@ -87,6 +101,21 @@ export default function ProgramForm({ initiallyOpen = false, showTrigger = true,
 
   function update<K extends keyof ProgramFormState>(key: K, value: ProgramFormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function updateSupervisorEmail(index: number, value: string) {
+    const next = [...form.supervisor_emails];
+    next[index] = value;
+    update('supervisor_emails', next);
+  }
+
+  function addSupervisorEmail() {
+    update('supervisor_emails', [...form.supervisor_emails, '']);
+  }
+
+  function removeSupervisorEmail(index: number) {
+    const next = form.supervisor_emails.filter((_, currentIndex) => currentIndex !== index);
+    update('supervisor_emails', next.length > 0 ? next : ['']);
   }
 
   function toggleAddOn(addOnKey: EUPackageAddOnKey) {
@@ -113,57 +142,68 @@ export default function ProgramForm({ initiallyOpen = false, showTrigger = true,
   function removeAdjustment(key: 'eu_package_custom_adjustments' | 'service_tier_custom_adjustments', index: number) {
     update(
       key,
-      form[key].filter((_, i) => i !== index)
+      form[key].filter((_, adjustmentIndex) => adjustmentIndex !== index)
     );
   }
 
   async function handleSave() {
-    if (!form.company_name.trim()) return;
-    setSaving(true);
-    const { data, error } = await supabase
-      .from('programs')
-      .insert({
-      company_name: form.company_name.trim(),
-      contact_name: form.contact_name.trim() || null,
-      contact_email: form.contact_email.trim() || null,
-      contact_phone: form.contact_phone.trim() || null,
-      approval_required: form.approval_required,
-      approver_emails: form.approver_emails
-        .split(',')
-        .map((e) => e.trim())
-        .filter(Boolean),
-      invoice_terms: form.invoice_terms.trim() || null,
-      program_type: form.program_type.trim() || null,
-      employee_count: Number(form.employee_count) || 0,
-      restricted_guidelines: form.restricted_guidelines.trim() || null,
-      loyalty_credit_count: Number(form.loyalty_credit_count) || 0,
-      referral_credit_count: Number(form.referral_credit_count) || 0,
-      eu_package: form.eu_package,
-      eu_package_add_ons: form.eu_package_add_ons,
-      eu_package_custom_adjustments: safeParsePriceAdjustments(form.eu_package_custom_adjustments),
-      service_tier: form.service_tier,
-      service_tier_custom_adjustments: safeParsePriceAdjustments(form.service_tier_custom_adjustments),
-      })
-      .select('id')
-      .single();
-    setSaving(false);
-    if (error) {
-      alert(`Failed to save company: ${error.message}`);
+    if (!form.company_name.trim()) {
+      setMessage('Company name is required.');
       return;
     }
+
+    setSaving(true);
+    setMessage('');
+    const res = await fetch('/api/programs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        company_name: form.company_name.trim(),
+        company_code: form.company_code.trim() || null,
+        contact_name: form.contact_name.trim() || null,
+        contact_email: form.contact_email.trim() || null,
+        contact_phone: form.contact_phone.trim() || null,
+        approval_required: form.approval_required,
+        approver_emails: form.supervisor_emails.map((email) => email.trim()).filter(Boolean),
+        invoice_terms: form.invoice_terms,
+        program_type: form.program_type,
+        employee_count: Number(form.employee_count) || 0,
+        restricted_guidelines:
+          serializeCompanyGuidelines({
+            lightReactive: form.light_reactive_policy,
+            sunglasses: form.sunglasses_policy,
+          }) || null,
+        loyalty_credit_count: Number(form.loyalty_credit_count) || 0,
+        referral_credit_count: Number(form.referral_credit_count) || 0,
+        eu_package: form.eu_package,
+        eu_package_add_ons: form.eu_package_add_ons,
+        eu_package_custom_adjustments: safeParsePriceAdjustments(form.eu_package_custom_adjustments),
+        service_tier: form.service_tier,
+        service_tier_custom_adjustments: safeParsePriceAdjustments(form.service_tier_custom_adjustments),
+      }),
+    });
+    setSaving(false);
+
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMessage(body.error || 'Failed to save company');
+      return;
+    }
+
     if (redirectOnSave) {
       router.push(redirectOnSave);
       router.refresh();
       return;
     }
 
-    if (!showTrigger && data?.id) {
-      router.push(`/programs/${data.id}`);
+    if (!showTrigger && body.company?.id) {
+      router.push(`/programs/${body.company.id}`);
       router.refresh();
       return;
     }
 
     setOpen(false);
+    setMessage('Company saved.');
     router.refresh();
   }
 
@@ -193,20 +233,45 @@ export default function ProgramForm({ initiallyOpen = false, showTrigger = true,
           />
         </div>
         <div>
-          <label className={labelClass}>Program Type</label>
-          <input value={form.program_type} onChange={(e) => update('program_type', e.target.value)} className={inputClass} />
+          <label className={labelClass}>Company Code</label>
+          <input
+            placeholder="Internal company code"
+            value={form.company_code}
+            onChange={(e) => update('company_code', e.target.value)}
+            className={inputClass}
+          />
         </div>
         <div>
-          <label className={labelClass}>POC Name</label>
+          <label className={labelClass}>Program Type</label>
+          <select value={form.program_type} onChange={(e) => update('program_type', e.target.value as ProgramFormState['program_type'])} className={inputClass}>
+            {PROGRAM_TYPE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelClass}>Point of Contact Name</label>
           <input value={form.contact_name} onChange={(e) => update('contact_name', e.target.value)} className={inputClass} />
         </div>
         <div>
-          <label className={labelClass}>POC Email</label>
+          <label className={labelClass}>Point of Contact Email</label>
           <input type="email" value={form.contact_email} onChange={(e) => update('contact_email', e.target.value)} className={inputClass} />
         </div>
         <div>
-          <label className={labelClass}>POC Phone</label>
+          <label className={labelClass}>Point of Contact Phone</label>
           <input value={form.contact_phone} onChange={(e) => update('contact_phone', e.target.value)} className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>Net Terms</label>
+          <select value={form.invoice_terms} onChange={(e) => update('invoice_terms', e.target.value as PaymentTerms)} className={inputClass}>
+            {NET_TERM_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className={labelClass}>Employee Count</label>
@@ -227,10 +292,10 @@ export default function ProgramForm({ initiallyOpen = false, showTrigger = true,
             <label className={labelClass}>Package</label>
             <select
               value={form.eu_package}
-              onChange={(e) => update('eu_package', e.target.value as EUPackage)}
+              onChange={(e) => update('eu_package', e.target.value as ProgramFormState['eu_package'])}
               className={inputClass}
             >
-              {EU_PACKAGES.map((euPackage) => (
+              {EU_PACKAGE_FORM_OPTIONS.map((euPackage) => (
                 <option key={euPackage} value={euPackage}>
                   {euPackage} (${PRICING.euAllowancePerEmployee[euPackage]} / employee)
                 </option>
@@ -306,7 +371,7 @@ export default function ProgramForm({ initiallyOpen = false, showTrigger = true,
               onChange={(e) => update('service_tier', e.target.value as ServiceTier)}
               className={inputClass}
             >
-              {SERVICE_TIERS.map((tier) => (
+              {SERVICE_TIER_FORM_OPTIONS.map((tier) => (
                 <option key={tier} value={tier}>
                   {tier} (${PRICING.serviceFeePerEmployee[tier]} / employee, {PRICING.standardVisitsByTier[tier]} visits)
                 </option>
@@ -358,14 +423,37 @@ export default function ProgramForm({ initiallyOpen = false, showTrigger = true,
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label className={labelClass}>Approver Emails (comma-separated)</label>
-          <input value={form.approver_emails} onChange={(e) => update('approver_emails', e.target.value)} className={inputClass} />
+        <div className="md:col-span-2">
+          <label className={labelClass}>Supervisor Email</label>
+          <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+            {form.supervisor_emails.map((email, index) => (
+              <div key={`supervisor-email-${index}`} className="flex gap-2">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => updateSupervisorEmail(index, e.target.value)}
+                  placeholder={`Supervisor email ${index + 1}`}
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeSupervisorEmail(index)}
+                  className="rounded-lg border border-red-200 px-3 text-sm text-red-600 hover:bg-red-50"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addSupervisorEmail}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-white"
+            >
+              + Add Supervisor
+            </button>
+          </div>
         </div>
-        <div>
-          <label className={labelClass}>Invoice Terms</label>
-          <input value={form.invoice_terms} onChange={(e) => update('invoice_terms', e.target.value)} className={inputClass} />
-        </div>
+
         <div>
           <label className={labelClass}>Loyalty Credits</label>
           <input
@@ -388,15 +476,35 @@ export default function ProgramForm({ initiallyOpen = false, showTrigger = true,
         </div>
       </div>
 
-      <div className="mb-6">
-          <label className={labelClass}>Company Guidelines</label>
-        <textarea
-          rows={4}
-          value={form.restricted_guidelines}
-          onChange={(e) => update('restricted_guidelines', e.target.value)}
-          className={inputClass}
-          placeholder="Company restrictions, ordering rules, approval notes, and safety requirements."
-        />
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div>
+          <label className={labelClass}>Company Guidelines: Light Reactive</label>
+          <select
+            value={form.light_reactive_policy}
+            onChange={(e) => update('light_reactive_policy', e.target.value as LightReactivePolicy)}
+            className={inputClass}
+          >
+            {LIGHT_REACTIVE_OPTIONS.map((option) => (
+              <option key={option.value || 'blank'} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelClass}>Company Guidelines: Sun Glasses</label>
+          <select
+            value={form.sunglasses_policy}
+            onChange={(e) => update('sunglasses_policy', e.target.value as SunglassesPolicy)}
+            className={inputClass}
+          >
+            {SUNGLASSES_OPTIONS.map((option) => (
+              <option key={option.value || 'blank'} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm">
@@ -413,8 +521,10 @@ export default function ProgramForm({ initiallyOpen = false, showTrigger = true,
           checked={form.approval_required}
           onChange={(e) => update('approval_required', e.target.checked)}
         />
-        Require approval before processing
+        Require supervisor approval before processing
       </label>
+
+      {message && <p className="mb-4 text-sm text-gray-700">{message}</p>}
 
       <div className="flex flex-wrap gap-2">
         <button

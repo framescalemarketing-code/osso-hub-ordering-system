@@ -7,8 +7,6 @@ export type OrderStatus = 'draft' | 'pending_approval' | 'approved' | 'processin
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 export type GlassesType = 'safety_rx' | 'safety_non_rx' | 'non_safety_rx' | 'non_safety_non_rx';
 export type LensVendor = 'nassau' | 'abb_optical' | 'other';
-export type ReminderType = 'follow_up' | 'order_update' | 'approval_needed' | 'invoice_due';
-export type ReminderStatus = 'pending' | 'processing' | 'sent' | 'cancelled';
 
 export interface Address {
   street: string;
@@ -34,6 +32,7 @@ export interface Employee {
 export interface Program {
   id: string;
   company_name: string;
+  company_code?: string | null;
   contact_name: string | null;
   contact_email: string | null;
   contact_phone: string | null;
@@ -140,11 +139,7 @@ export interface Order {
   shipping_method: string | null;
   tracking_number: string | null;
   clickup_task_id: string | null;
-  netsuite_id: string | null;
-  quickbooks_id: string | null;
   bigquery_synced_at: string | null;
-  invoice_number: string | null;
-  invoice_sent_at: string | null;
   invoice_pdf_path: string | null;
   internal_notes: string | null;
   customer_notes: string | null;
@@ -196,24 +191,6 @@ export interface Approval {
   requested_by: string | null;
 }
 
-export interface Reminder {
-  id: string;
-  order_id: string | null;
-  customer_id: string | null;
-  employee_id: string | null;
-  reminder_type: ReminderType;
-  subject: string;
-  body: string | null;
-  due_at: string;
-  status: ReminderStatus;
-  processing_at: string | null;
-  processing_by: string | null;
-  attempts: number;
-  last_error: string | null;
-  sent_at: string | null;
-  created_at: string;
-}
-
 export interface SyncLog {
   id: string;
   integration: string;
@@ -231,7 +208,7 @@ export type IntegrationJobStatus = 'pending' | 'processing' | 'succeeded' | 'fai
 export interface IntegrationJob {
   id: string;
   order_id: string;
-  integration: 'clickup' | 'netsuite' | 'quickbooks' | 'bigquery' | 'mailchimp';
+  integration: 'clickup' | 'bigquery';
   status: IntegrationJobStatus;
   attempts: number;
   max_attempts: number;

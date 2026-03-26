@@ -11,7 +11,6 @@ const navItems = [
   { href: '/customers', label: 'Customers' },
   { href: '/programs', label: 'Companies' },
   { href: '/eligibility', label: 'Eligibility' },
-  { href: '/reminders', label: 'Reminders' },
   { href: '/settings', label: 'Settings' },
 ];
 

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import OrderActions from '@/components/OrderActions';
 import type { Approval, Customer, Employee, Order, OrderItem, Prescription, Program } from '@/lib/types';
+import { formatInvoiceTerms } from '@/lib/program-options';
 
 type OrderDetail = Order & {
   customer?: Customer | null;
@@ -139,7 +140,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#7d6541]">Company</h3>
               <p className="font-semibold text-[#322616]">{typedOrder.program.company_name}</p>
               {typedOrder.program.invoice_terms && (
-                <p className="text-sm text-[#6f5b40]">Terms: {typedOrder.program.invoice_terms}</p>
+                <p className="text-sm text-[#6f5b40]">Net Terms: {formatInvoiceTerms(typedOrder.program.invoice_terms)}</p>
               )}
             </div>
           )}
@@ -157,12 +158,6 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 <span className="text-[#7d6541]">Created</span>
                 <span className="text-right">{new Date(typedOrder.created_at).toLocaleString()}</span>
               </div>
-              {canViewOperationalIds && typedOrder.invoice_number && (
-                <div className="flex items-start justify-between gap-3">
-                  <span className="text-[#7d6541]">Invoice</span>
-                  <span className="text-right break-all">{typedOrder.invoice_number}</span>
-                </div>
-              )}
               {canViewOperationalIds && typedOrder.clickup_task_id && (
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-[#7d6541]">ClickUp</span>
