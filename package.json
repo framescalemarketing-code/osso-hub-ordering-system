@@ -12,7 +12,11 @@
     "typecheck": "tsc --noEmit",
     "check:fast": "npm run lint && npm run typecheck",
     "check": "npm run check:fast && npm run build",
-    "repo:protect": "node ./scripts/github/apply-branch-protection.mjs"
+    "repo:protect": "node ./scripts/github/apply-branch-protection.mjs",
+    "seed:clickup-companies": "node ./scripts/programs/seed-clickup-companies.mjs",
+    "clickup:ids": "node ./scripts/clickup/list-ids.mjs",
+    "clickup:provision-fields": "node ./scripts/clickup/provision-order-fields.mjs",
+    "clickup:fields": "node ./scripts/clickup/export-custom-fields.mjs"
   },
   "engines": {
     "node": ">=20.9.0 <21"

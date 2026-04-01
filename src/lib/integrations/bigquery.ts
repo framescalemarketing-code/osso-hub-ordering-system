@@ -340,11 +340,17 @@ async function ensureTable(dataset: Dataset, tableId: string, schema: BigQueryFi
   const mergedSchema = mergeSchemas(existingSchema, schema);
 
   if (!schemasEqual(existingSchema, mergedSchema)) {
-    await table.setMetadata({ schema: mergedSchema });
-    const addedFields = diffSchemaFields(existingSchema, mergedSchema).map((field) => field.name);
-    console.info(
-      `[BigQuery] Patched table ${dataset.id}.${tableId} schema${addedFields.length ? ` (+${addedFields.join(', ')})` : ''}`
-    );
+    try {
+      await table.setMetadata({ schema: mergedSchema });
+      const addedFields = diffSchemaFields(existingSchema, mergedSchema).map((field) => field.name);
+      console.info(
+        `[BigQuery] Patched table ${dataset.id}.${tableId} schema${addedFields.length ? ` (+${addedFields.join(', ')})` : ''}`
+      );
+    } catch (error) {
+      if (!isSchemaAlreadyPatchedError(error)) {
+        throw error;
+      }
+    }
   }
 
   return table;
@@ -605,4 +611,10 @@ function isAlreadyExistsError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const candidate = error as { code?: number; message?: string };
   return candidate.code === 409 || /already exists/i.test(candidate.message || '');
+}
+
+function isSchemaAlreadyPatchedError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as { code?: number; message?: string };
+  return candidate.code === 400 && /already exists in schema/i.test(candidate.message || '');
 }

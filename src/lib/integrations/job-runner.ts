@@ -1,6 +1,6 @@
 import { syncToClickUp } from './clickup';
 import { writeOrderToBigQuery } from './bigquery';
-import type { Customer, Order, OrderItem, Program } from '@/lib/types';
+import type { Customer, Order, OrderItem, Prescription, Program } from '@/lib/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type IntegrationJobRecord = {
@@ -20,12 +20,13 @@ type OrderSyncContext = {
   customer: Customer;
   items: OrderItem[];
   program: Program | null;
+  prescription: Prescription | null;
 };
 
 export async function getOrderSyncContext(serviceClient: SupabaseClient, orderId: string): Promise<OrderSyncContext> {
   const { data: order, error: orderError } = await serviceClient
     .from('orders')
-    .select('*, program:programs(*)')
+    .select('*, program:programs(*), prescription:prescriptions(*)')
     .eq('id', orderId)
     .single();
   if (orderError || !order) throw new Error(orderError?.message || 'Order not found');
@@ -46,6 +47,7 @@ export async function getOrderSyncContext(serviceClient: SupabaseClient, orderId
     customer: customer as Customer,
     items: ((items as OrderItem[] | null) || []) as OrderItem[],
     program: ((order as Order & { program?: Program | null }).program ?? null) as Program | null,
+    prescription: ((order as Order & { prescription?: Prescription | null }).prescription ?? null) as Prescription | null,
   };
 }
 
@@ -59,7 +61,8 @@ export async function runIntegrationForOrder(
     customer: context.customer,
     program: context.program,
     items: context.items,
-  } as Order & { customer: Customer; program?: Program | null; items: OrderItem[] };
+    prescription: context.prescription,
+  } as Order & { customer: Customer; program?: Program | null; items: OrderItem[]; prescription?: Prescription | null };
 
   let externalId: string | null = null;
 

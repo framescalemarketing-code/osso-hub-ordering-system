@@ -98,42 +98,59 @@ export async function createPrescriptionForOrderIntake(params: {
       ? enrollmentResolution.reason
       : 'regular_order_no_program_linkage';
 
-  const { data, error } = await supabase
+  const basePrescriptionPayload = {
+    customer_id: customerId,
+    od_sphere: toNumber(input.od_sphere),
+    od_cylinder: toNumber(input.od_cylinder),
+    od_axis: toInteger(input.od_axis),
+    od_add: toNumber(input.od_add),
+    od_prism: toNumber(input.od_prism),
+    od_prism_base: toStringOrNull(input.od_prism_base),
+    os_sphere: toNumber(input.os_sphere),
+    os_cylinder: toNumber(input.os_cylinder),
+    os_axis: toInteger(input.os_axis),
+    os_add: toNumber(input.os_add),
+    os_prism: toNumber(input.os_prism),
+    os_prism_base: toStringOrNull(input.os_prism_base),
+    pd_distance: toNumber(input.pd_distance),
+    pd_near: toNumber(input.pd_near),
+    pd_right: toNumber(input.pd_right),
+    pd_left: toNumber(input.pd_left),
+    prescriber_name: toStringOrNull(input.prescriber_name),
+    prescriber_npi: toStringOrNull(input.prescriber_npi),
+    rx_date: toDateOrNull(input.rx_date),
+    expiration_date: toDateOrNull(input.expiration_date),
+    pdf_storage_path: toStringOrNull(input.pdf_storage_path),
+    notes: toStringOrNull(input.notes),
+    is_current: true,
+    uploaded_by: actorEmployeeId,
+    program_id: programId,
+    program_enrollment_id: enrollmentResolution.enrollment?.id ?? null,
+    enrollment_resolution_status: normalizedStatus,
+    enrollment_resolution_reason: normalizedReason,
+    upload_source: 'order_intake',
+  };
+
+  const fittingPayload = {
+    oc_right_height: toNumber(input.oc_right_height),
+    oc_left_height: toNumber(input.oc_left_height),
+    seg_height: toNumber(input.seg_height),
+  };
+
+  let { data, error } = await supabase
     .from('prescriptions')
-    .insert({
-      customer_id: customerId,
-      od_sphere: toNumber(input.od_sphere),
-      od_cylinder: toNumber(input.od_cylinder),
-      od_axis: toInteger(input.od_axis),
-      od_add: toNumber(input.od_add),
-      od_prism: toNumber(input.od_prism),
-      od_prism_base: toStringOrNull(input.od_prism_base),
-      os_sphere: toNumber(input.os_sphere),
-      os_cylinder: toNumber(input.os_cylinder),
-      os_axis: toInteger(input.os_axis),
-      os_add: toNumber(input.os_add),
-      os_prism: toNumber(input.os_prism),
-      os_prism_base: toStringOrNull(input.os_prism_base),
-      pd_distance: toNumber(input.pd_distance),
-      pd_near: toNumber(input.pd_near),
-      pd_right: toNumber(input.pd_right),
-      pd_left: toNumber(input.pd_left),
-      prescriber_name: toStringOrNull(input.prescriber_name),
-      prescriber_npi: toStringOrNull(input.prescriber_npi),
-      rx_date: toDateOrNull(input.rx_date),
-      expiration_date: toDateOrNull(input.expiration_date),
-      pdf_storage_path: toStringOrNull(input.pdf_storage_path),
-      notes: toStringOrNull(input.notes),
-      is_current: true,
-      uploaded_by: actorEmployeeId,
-      program_id: programId,
-      program_enrollment_id: enrollmentResolution.enrollment?.id ?? null,
-      enrollment_resolution_status: normalizedStatus,
-      enrollment_resolution_reason: normalizedReason,
-      upload_source: 'order_intake',
-    })
+    .insert({ ...basePrescriptionPayload, ...fittingPayload })
     .select('*')
     .single();
+
+  // Allow additive migration rollout without breaking live intake.
+  if (error?.message?.includes('oc_right_height') || error?.message?.includes('oc_left_height') || error?.message?.includes('seg_height')) {
+    ({ data, error } = await supabase
+      .from('prescriptions')
+      .insert(basePrescriptionPayload)
+      .select('*')
+      .single());
+  }
 
   if (error || !data) {
     throw new Error(error?.message || 'Failed to persist prescription');

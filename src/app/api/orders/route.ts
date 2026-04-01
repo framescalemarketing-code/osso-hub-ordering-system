@@ -3,6 +3,38 @@ import { createServerSupabaseClient, createServiceClient } from '@/lib/supabase/
 import { enqueueOrderIntegrationJobs } from '@/lib/integrations/job-queue';
 import type { Order, OrderItem } from '@/lib/types';
 
+async function triggerOrderJobProcessor(request: NextRequest, orderId: string) {
+  const secret = process.env.JOB_RUNNER_SECRET;
+  if (!secret) return;
+
+  try {
+    const res = await fetch(new URL('/api/jobs/process', request.url).toString(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-job-secret': secret,
+      },
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Job processor request failed: ${res.status} ${body}`);
+    }
+  } catch (err: unknown) {
+    const serviceClient = createServiceClient();
+    const message = err instanceof Error ? err.message : 'Failed to trigger order job processor';
+    await serviceClient.from('sync_log').insert({
+      integration: 'job_queue',
+      record_type: 'order',
+      record_id: orderId,
+      status: 'failed',
+      error_message: message,
+      attempts: 1,
+      last_attempt_at: new Date().toISOString(),
+    });
+  }
+}
+
 type OrderInputItem = Partial<OrderItem> & {
   glasses_type: OrderItem['glasses_type'];
   quantity?: number;
@@ -162,6 +194,7 @@ export async function POST(request: NextRequest) {
   const serviceClient = createServiceClient();
   try {
     await enqueueOrderIntegrationJobs(serviceClient, order.id, customer || null);
+    await triggerOrderJobProcessor(request, order.id);
   } catch (queueError: unknown) {
     const message = queueError instanceof Error ? queueError.message : 'Failed to enqueue integration jobs';
     await serviceClient.from('sync_log').insert({

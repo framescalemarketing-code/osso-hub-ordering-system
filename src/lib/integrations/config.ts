@@ -6,9 +6,12 @@ function hasEnabledFlag(value: string | undefined): boolean {
 
 export const integrations = {
   clickup: {
-    enabled: () => !!process.env.CLICKUP_API_KEY && !!process.env.CLICKUP_LIST_ID,
+    enabled: () =>
+      !!process.env.CLICKUP_API_KEY &&
+      (!!process.env.CLICKUP_LIST_ID || !!process.env.CLICKUP_COMPANIES_FOLDER_ID),
     apiKey: () => process.env.CLICKUP_API_KEY!,
     listId: () => process.env.CLICKUP_LIST_ID!,
+    companiesFolderId: () => process.env.CLICKUP_COMPANIES_FOLDER_ID?.trim() || null,
   },
   bigquery: {
     enabled: () => !!process.env.GOOGLE_CLOUD_PROJECT_ID?.trim(),

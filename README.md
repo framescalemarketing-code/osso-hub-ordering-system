@@ -85,13 +85,12 @@ Order integrations are enqueued in `integration_jobs` and processed by `/api/job
 
 ## Scheduler / server readiness
 
-Scheduled Vercel cron jobs are currently paused for development in `vercel.json`.
+Only order integration processing is scheduled right now:
+- `*/5 * * * *` -> `/api/jobs/process`
 
-When you are ready to resume them:
-- `0 9 * * *` -> `/api/jobs/process`
-- `30 9 * * *` -> `/api/reminders/process`
+Everything else remains paused for now, including reminder processing.
 
-Set `CRON_SECRET` in Vercel, restore the cron entries in `vercel.json`, and keep `JOB_RUNNER_SECRET` aligned so cron calls are authorized.
+Keep `JOB_RUNNER_SECRET` configured so `/api/jobs/process` calls are authorized.
 
 ## Quality automation
 

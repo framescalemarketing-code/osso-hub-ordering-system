@@ -23,6 +23,7 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
     od_sphere: '', od_cylinder: '', od_axis: '', od_add: '', od_prism: '', od_prism_base: '',
     os_sphere: '', os_cylinder: '', os_axis: '', os_add: '', os_prism: '', os_prism_base: '',
     pd_distance: '', pd_near: '', pd_right: '', pd_left: '',
+    oc_right_height: '', oc_left_height: '', seg_height: '',
     rx_date: '', expiration_date: '',
     notes: '',
   });
@@ -76,6 +77,9 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
         pd_near: rx.pd_near || null,
         pd_right: rx.pd_right || null,
         pd_left: rx.pd_left || null,
+        oc_right_height: rx.oc_right_height || null,
+        oc_left_height: rx.oc_left_height || null,
+        seg_height: rx.seg_height || null,
         prescriber_name: null,
         prescriber_npi: null,
         rx_date: rx.rx_date || null,
@@ -156,6 +160,13 @@ export default function PrescriptionForm({ customerId, orderType, programId, onC
         <div><label className={labelClass}>Near PD</label><input type="number" step="0.5" value={rx.pd_near} onChange={e => update('pd_near', e.target.value)} className={inputClass} /></div>
         <div><label className={labelClass}>Right PD</label><input type="number" step="0.5" value={rx.pd_right} onChange={e => update('pd_right', e.target.value)} className={inputClass} /></div>
         <div><label className={labelClass}>Left PD</label><input type="number" step="0.5" value={rx.pd_left} onChange={e => update('pd_left', e.target.value)} className={inputClass} /></div>
+      </div>
+
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#7d6541]">Fitting Measurements</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
+        <div><label className={labelClass}>OC Right Height</label><input type="number" step="0.5" value={rx.oc_right_height} onChange={e => update('oc_right_height', e.target.value)} className={inputClass} /></div>
+        <div><label className={labelClass}>OC Left Height</label><input type="number" step="0.5" value={rx.oc_left_height} onChange={e => update('oc_left_height', e.target.value)} className={inputClass} /></div>
+        <div><label className={labelClass}>Seg Height</label><input type="number" step="0.5" value={rx.seg_height} onChange={e => update('seg_height', e.target.value)} className={inputClass} /></div>
       </div>
 
       {/* Prescription Date Info */}

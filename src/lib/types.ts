@@ -111,6 +111,9 @@ export interface Prescription {
   pd_near: number | null;
   pd_right: number | null;
   pd_left: number | null;
+  oc_right_height: number | null;
+  oc_left_height: number | null;
+  seg_height: number | null;
   prescriber_name: string | null;
   prescriber_npi: string | null;
   rx_date: string | null;
@@ -343,6 +346,9 @@ export interface CreatePrescriptionInput {
   pd_near?: number | string | null;
   pd_right?: number | string | null;
   pd_left?: number | string | null;
+  oc_right_height?: number | string | null;
+  oc_left_height?: number | string | null;
+  seg_height?: number | string | null;
   prescriber_name?: string | null;
   prescriber_npi?: string | null;
   rx_date?: string | null;
