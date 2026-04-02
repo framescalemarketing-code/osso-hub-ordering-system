@@ -15,6 +15,125 @@ export interface Address {
   zip: string;
 }
 
+export interface OrderProfileIntake {
+  euProfileLink: string;
+  euId: string;
+  middleInitial: string;
+  secondaryEmail: string;
+  supervisorEmail: string;
+  costCenter: string;
+  opticianName: string;
+  multipleNumber: string;
+  launchMultiple: boolean;
+}
+
+export interface OrderAuthorizationIntake {
+  uvExposure: boolean;
+  electricExposure: boolean;
+  authRequested: boolean;
+  authApprovalStatus: 'not_required' | 'pending' | 'approved' | 'rejected';
+  authFormLink: string;
+  dispenseType: string;
+  invoiceType: string;
+  allowance: number;
+  serviceAndTechFee: number;
+}
+
+export interface OrderPrescriptionIntake {
+  rxToCome: boolean;
+  rxExpirationDate: string;
+  rxUploadPath: string;
+  rxNotes: string;
+  odSphere: number | null;
+  odCylinder: number | null;
+  odAxis: number | null;
+  osSphere: number | null;
+  osCylinder: number | null;
+  osAxis: number | null;
+  odAdd: number | null;
+  osAdd: number | null;
+  odPrism: number | null;
+  odPrismDirection: string;
+  osPrism: number | null;
+  osPrismDirection: string;
+  odPd: number | null;
+  osPd: number | null;
+  odHeight: number | null;
+  osHeight: number | null;
+}
+
+export interface OrderProductIntake {
+  frameSelected: string;
+  framePrice: number;
+  sideShieldType: string;
+  sideShieldOptions: string;
+  sideShieldClearanceCode: string;
+  lensType: string;
+  lensMaterial: string;
+  lensCoating: string;
+  mirror: string;
+  tint: string;
+  specialEdging: string;
+  optionalFee: number;
+  customerShipAddress: string;
+  opticianNotes: string;
+}
+
+export interface OrderFinanceIntake {
+  discount: number;
+  oopBalanceDue: boolean;
+  oopPaidDate: string;
+  financeNotes: string;
+  sendItemizedReceipt: boolean;
+  logCashReceived: boolean;
+  notesToOps: string;
+  remakeType: string;
+  comments: string;
+}
+
+export interface OrderIntake {
+  orderType: OrderType;
+  customerId: string;
+  prescriptionId: string | null;
+  profile: OrderProfileIntake;
+  authorization: OrderAuthorizationIntake;
+  prescription: OrderPrescriptionIntake;
+  product: OrderProductIntake;
+  finance: OrderFinanceIntake;
+}
+
+export interface OrderPricingBreakdown {
+  frameCategoryFee: number;
+  lensMaterialFee: number;
+  lensTypeFee: number;
+  lensColorFee: number;
+  coatingFee: number;
+  serviceAndTechFee: number;
+  deliveryFee: number;
+  sideshieldFee: number;
+  tintFee: number;
+  mirrorFee: number;
+  edgingFee: number;
+  optionalFee: number;
+  lensMaterialColorFee: number;
+  discount: number;
+}
+
+export interface OrderPricingSummary {
+  billTo: number;
+  oop: number;
+  oopWithDiscount: number;
+  allowanceLeftover: number;
+  frameCategory: string;
+  totalFees: number;
+  lensColor: string;
+  lensMaterial: string;
+  feeBreakdown: OrderPricingBreakdown;
+  orderSummary: string;
+  readyToFile: boolean;
+  programYear: number;
+}
+
 export interface Employee {
   id: string;
   auth_user_id: string | null;
@@ -125,6 +244,9 @@ export interface Order {
   invoice_pdf_path: string | null;
   internal_notes: string | null;
   customer_notes: string | null;
+  intake_payload: OrderIntake | null;
+  pricing_summary: OrderPricingSummary | null;
+  submitted_to_bill_at: string | null;
   created_at: string;
   updated_at: string;
   // Relations
@@ -157,6 +279,8 @@ export interface OrderItem {
   quantity: number;
   line_total: number;
   notes: string | null;
+  configuration: OrderIntake['product'] | null;
+  pricing_breakdown: OrderPricingBreakdown | null;
   created_at: string;
 }
 

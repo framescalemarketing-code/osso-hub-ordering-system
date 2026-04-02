@@ -43,20 +43,44 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = data.user?.id;
-  if (userId) {
-    const { data: employee } = await supabase
-      .from('employees')
-      .select('id')
-      .eq('auth_user_id', userId)
-      .single();
-
-    if (employee) {
-      await supabase
-        .from('employees')
-        .update({ last_login_at: new Date().toISOString() })
-        .eq('auth_user_id', userId);
-    }
+  if (!userId) {
+    return NextResponse.json({ error: 'Unable to establish session' }, { status: 401 });
   }
 
-  return response;
+  const { data: employee } = await supabase
+    .from('employees')
+    .select('id, first_name, last_name')
+    .eq('auth_user_id', userId)
+    .maybeSingle();
+
+  if (!employee) {
+    await supabase.auth.signOut();
+    return NextResponse.json(
+      { error: 'Your login is valid, but it is not linked to an employee profile yet.' },
+      { status: 403 },
+    );
+  }
+
+  const { error: employeeUpdateError } = await supabase
+    .from('employees')
+    .update({ last_login_at: new Date().toISOString() })
+    .eq('auth_user_id', userId);
+
+  if (employeeUpdateError) {
+    return NextResponse.json({ error: employeeUpdateError.message }, { status: 500 });
+  }
+
+  const finalResponse = NextResponse.json({
+    ok: true,
+    employee: {
+      id: employee.id,
+      name: `${employee.first_name} ${employee.last_name}`,
+    },
+  });
+
+  response.cookies.getAll().forEach(cookie => {
+    finalResponse.cookies.set(cookie.name, cookie.value);
+  });
+
+  return finalResponse;
 }

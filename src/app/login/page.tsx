@@ -47,26 +47,15 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
     });
 
-    if (authError || !data.user) {
-      setError('Invalid email or password');
-      setLoading(false);
-      return;
-    }
-
-    const { data: employee, error: employeeError } = await supabase
-      .from('employees')
-      .select('id')
-      .eq('auth_user_id', data.user.id)
-      .maybeSingle();
-
-    if (employeeError || !employee) {
-      await supabase.auth.signOut();
-      setError('Your account is valid, but it is not linked to an employee profile yet.');
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: 'Unable to sign in' }));
+      setError(data.error || 'Unable to sign in');
       setLoading(false);
       return;
     }

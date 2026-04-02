@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import CustomerIntakeForm from '@/components/CustomerIntakeForm';
 import PrescriptionForm from '@/components/PrescriptionForm';
-import GlassesOrderItems from '@/components/GlassesOrderItems';
-import type { Customer, Prescription, OrderItem, Program } from '@/lib/types';
+import OrderIntakeForm from '@/components/OrderIntakeForm';
+import { applyPrescriptionToIntake, createEmptyOrderIntake } from '@/lib/orders/intake';
+import type { Customer, OrderIntake, OrderPricingSummary, Prescription, Program } from '@/lib/types';
 
-type Step = 'customer' | 'prescription' | 'items' | 'review';
+type Step = 'customer' | 'prescription' | 'intake' | 'review';
 
 export default function NewOrderPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -17,9 +18,11 @@ export default function NewOrderPage() {
   const [orderType, setOrderType] = useState<'regular' | 'program'>('regular');
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [prescription, setPrescription] = useState<Prescription | null>(null);
-  const [items, setItems] = useState<Partial<OrderItem>[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+  const [intake, setIntake] = useState<OrderIntake>(() => createEmptyOrderIntake('regular'));
+  const [quote, setQuote] = useState<OrderPricingSummary | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,8 +32,55 @@ export default function NewOrderPage() {
     });
   }, [supabase]);
 
+  useEffect(() => {
+    setIntake(prev => ({
+      ...createEmptyOrderIntake(orderType, customer?.id || '', prescription?.id || null),
+      ...prev,
+      orderType,
+      customerId: customer?.id || '',
+      prescriptionId: prescription?.id || null,
+      authorization: {
+        ...prev.authorization,
+        invoiceType:
+          prev.authorization.invoiceType === 'out-of-pocket' && orderType === 'program'
+            ? 'program-allowance'
+            : prev.authorization.invoiceType,
+      },
+      prescription: {
+        ...prev.prescription,
+        ...applyPrescriptionToIntake(prev, prescription).prescription,
+      },
+    }));
+  }, [customer?.id, orderType, prescription]);
+
+  async function fetchQuote(currentIntake: OrderIntake) {
+    setQuoteLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/orders/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intake: currentIntake }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to calculate backend summary');
+      }
+
+      const data = await res.json();
+      setQuote(data.summary as OrderPricingSummary);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to calculate backend summary');
+      setQuote(null);
+    } finally {
+      setQuoteLoading(false);
+    }
+  }
+
   async function handleSubmitOrder() {
-    if (!customer || items.length === 0) return;
+    if (!customer) return;
     setSubmitting(true);
     setError('');
 
@@ -43,7 +93,12 @@ export default function NewOrderPage() {
           customer_id: customer.id,
           program_id: selectedProgramId,
           prescription_id: prescription?.id,
-          items,
+          intake: {
+            ...intake,
+            orderType,
+            customerId: customer.id,
+            prescriptionId: prescription?.id || null,
+          },
           shipping_address: customer.address,
         }),
       });
@@ -61,16 +116,12 @@ export default function NewOrderPage() {
     }
   }
 
-  const subtotal = items.reduce((sum, i) => sum + (Number(i.line_total) || 0), 0);
-  const tax = subtotal * 0.0875; // CA sales tax
-  const total = subtotal + tax;
-
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">New Order</h1>
+      <h1 className="mb-6 text-2xl font-bold">New Order</h1>
 
       {/* Order Type Toggle */}
-      <div className="flex gap-3 mb-6">
+      <div className="mb-6 flex gap-3">
         <button
           onClick={() => setOrderType('regular')}
           className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
@@ -107,13 +158,13 @@ export default function NewOrderPage() {
       )}
 
       {/* Step Indicators */}
-      <div className="flex gap-2 mb-8">
-        {(['customer', 'prescription', 'items', 'review'] as Step[]).map((s, i) => (
+      <div className="mb-8 flex gap-2">
+        {(['customer', 'prescription', 'intake', 'review'] as Step[]).map((s, i) => (
           <div
             key={s}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
               step === s ? 'bg-blue-50 text-blue-600 border border-blue-200' :
-              (['customer', 'prescription', 'items', 'review'].indexOf(step) > i)
+              (['customer', 'prescription', 'intake', 'review'].indexOf(step) > i)
                 ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
             }`}
           >
@@ -132,7 +183,11 @@ export default function NewOrderPage() {
       {/* Step Content */}
       {step === 'customer' && (
         <CustomerIntakeForm
-          onComplete={(c) => { setCustomer(c); setStep('prescription'); }}
+          onComplete={(c) => {
+            setCustomer(c);
+            setIntake(prev => ({ ...prev, customerId: c.id }));
+            setStep('prescription');
+          }}
           existingCustomer={customer}
         />
       )}
@@ -140,16 +195,30 @@ export default function NewOrderPage() {
       {step === 'prescription' && customer && (
         <PrescriptionForm
           customerId={customer.id}
-          onComplete={(rx) => { setPrescription(rx); setStep('items'); }}
-          onSkip={() => setStep('items')}
+          onComplete={(rx) => {
+            setPrescription(rx);
+            setIntake(applyPrescriptionToIntake({ ...intake, customerId: customer.id }, rx));
+            setStep('intake');
+          }}
+          onSkip={() => setStep('intake')}
         />
       )}
 
-      {step === 'items' && (
-        <GlassesOrderItems
-          items={items}
-          onChange={setItems}
-          onComplete={() => setStep('review')}
+      {step === 'intake' && customer && (
+        <OrderIntakeForm
+          intake={intake}
+          onChange={setIntake}
+          onComplete={async () => {
+            const currentIntake = {
+              ...intake,
+              orderType,
+              customerId: customer.id,
+              prescriptionId: prescription?.id || null,
+            };
+            setIntake(currentIntake);
+            await fetchQuote(currentIntake);
+            setStep('review');
+          }}
         />
       )}
 
@@ -181,45 +250,83 @@ export default function NewOrderPage() {
               )}
             </div>
 
-            <table className="w-full text-sm mb-4">
-              <thead>
-                <tr className="border-b border-gray-200 text-gray-500">
-                  <th className="text-left py-2">Item</th>
-                  <th className="text-left py-2">Type</th>
-                  <th className="text-right py-2">Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, idx) => (
-                  <tr key={idx} className="border-b border-gray-100">
-                    <td className="py-2">{item.frame_brand} {item.frame_model}</td>
-                    <td className="py-2 capitalize">{item.glasses_type?.replace(/_/g, ' ')}</td>
-                    <td className="py-2 text-right">${Number(item.line_total || 0).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {quoteLoading && <p className="text-sm text-gray-500">Calculating backend summary...</p>}
 
-            <div className="text-right space-y-1 text-sm">
-              <p>Subtotal: <span className="font-medium">${subtotal.toFixed(2)}</span></p>
-              <p>Tax (8.75%): <span className="font-medium">${tax.toFixed(2)}</span></p>
-              <p className="text-lg font-bold mt-2">Total: ${total.toFixed(2)}</p>
-            </div>
+            {quote && (
+              <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+                <div>
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Intake Snapshot</h3>
+                  <div className="grid grid-cols-1 gap-3 rounded-xl bg-gray-50 p-4 text-sm text-gray-700 md:grid-cols-2">
+                    <div>
+                      <p className="text-gray-500">Frame Selected</p>
+                      <p className="font-medium">{intake.product.frameSelected || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Invoice Type</p>
+                      <p className="font-medium">{intake.authorization.invoiceType.replace(/-/g, ' ')}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Lens Type</p>
+                      <p className="font-medium">{intake.product.lensType || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Lens Material</p>
+                      <p className="font-medium">{intake.product.lensMaterial || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Auth Status</p>
+                      <p className="font-medium">{intake.authorization.authApprovalStatus.replace(/_/g, ' ')}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Allowance</p>
+                      <p className="font-medium">${Number(intake.authorization.allowance || 0).toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-5">
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-700">Calculated On Backend</h3>
+                  <div className="space-y-2 text-sm text-blue-900">
+                    <div className="flex justify-between"><span>Total Fees</span><span className="font-semibold">${quote.totalFees.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>Bill To</span><span className="font-semibold">${quote.billTo.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>OOP</span><span className="font-semibold">${quote.oop.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>OOP With Discount</span><span className="font-semibold">${quote.oopWithDiscount.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>Allowance Leftover</span><span className="font-semibold">${quote.allowanceLeftover.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>Frame Category</span><span className="font-semibold">{quote.frameCategory}</span></div>
+                    <div className="flex justify-between"><span>Program Year</span><span className="font-semibold">{quote.programYear}</span></div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {quote && (
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Fee Breakdown</h3>
+                <div className="grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
+                  {Object.entries(quote.feeBreakdown).map(([label, value]) => (
+                    <div key={label} className="flex justify-between rounded-lg bg-white px-3 py-2">
+                      <span>{label.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase())}</span>
+                      <span className="font-medium">${Number(value).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3">
             <button
-              onClick={() => setStep('items')}
+              onClick={() => setStep('intake')}
               className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition"
             >
               Back
             </button>
             <button
               onClick={handleSubmitOrder}
-              disabled={submitting}
+              disabled={submitting || quoteLoading || !quote}
               className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 rounded-lg font-semibold transition"
             >
-              {submitting ? 'Creating Order...' : orderType === 'program' ? 'Submit for Approval' : 'Place Order'}
+              {submitting ? 'Submitting To Bill...' : orderType === 'program' ? 'Submit To Bill' : 'Create Order'}
             </button>
           </div>
         </div>
